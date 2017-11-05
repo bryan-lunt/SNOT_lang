@@ -1,0 +1,78 @@
+%{
+#include <iostream>
+#include <string>
+#include <map>
+#include <cstdlib> //-- I need this for atoi
+using namespace std;
+
+//-- Lexer prototype required by bison, aka getNextToken()
+int yylex();
+int yyerror(const char *p) { cerr << "Parse error!" << endl; }
+%}
+
+//-- SYMBOL SEMANTIC VALUES -----------------------------
+//-- In bison, every symbol, whether it be token or non-terminal
+//-- can have a "semantic value".  A NUM token "4.35", has
+//-- semantic value 4.35.  A "term" symbol representing
+//-- "-3.5*2*5" has semantic value 35.0, which you get by
+//-- evaluating -3.5*2*5.  An OPA symbol's semantic value
+//-- is '+' or '-' depending on which symbol we actually read.
+//-- Some tokens, like STOP or RP don't need a semantic value.
+//-- The %union statement lists the type-and-name for each
+//-- semantic value.  The %token and %type statements let you
+//-- you specify semantic value types for tokens and
+//-- non-terminals.
+%union {
+  long double val;
+  char *sym;
+  void *object;
+};
+%token <val> NUMBER
+%token <sym> STRING
+%type <object> OBJECT MEMBERS ELEMENTS VALUE PAIR ARRAY
+%left O_BEGIN O_END A_BEGIN A_END
+%left COMMA
+%left COLON
+%%
+START: ARRAY {
+  }
+| OBJECT {
+  }
+;
+OBJECT: O_BEGIN O_END {
+    $$ = "{}";
+  }
+| O_BEGIN MEMBERS O_END {
+    //$$=
+  }
+;
+MEMBERS: PAIR {
+    $$ = $1;
+  }
+| PAIR COMMA MEMBERS {
+    //$$ =
+  }
+;
+PAIR: STRING COLON VALUE {
+    //$$ =
+  }
+;
+ARRAY: A_BEGIN A_END {
+    //$$ = (char *)malloc(sizeof(char)*(2+1));
+  }
+| A_BEGIN ELEMENTS A_END {
+    //$$ = (char *)malloc(sizeof(char)*(1+strlen($2)+1+1));
+}
+;
+ELEMENTS: VALUE {
+    $$ = $1;
+  }
+| VALUE COMMA ELEMENTS {
+    //$$ =
+  }
+;
+VALUE: NUMBER {$$=yylval;}
+| OBJECT {$$=$1;}
+| ARRAY {$$=$1;}
+;
+%%
