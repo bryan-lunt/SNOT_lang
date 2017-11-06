@@ -8,6 +8,7 @@
 
  //-- I need this for atoi
 using namespace std;
+using namespace gsparams;
 
 //-- Lexer prototype required by bison, aka getNextToken()
 int yylex();
@@ -30,15 +31,13 @@ int yyerror(const char *p) { cerr << "Parse error!" << endl; }
   double val;
   std::string *sym;
   gsparams::DictList *onevalue;
-  std::pair<std::string, gsparams::DictList> *onepair;
-  std::vector< std::pair<std::string, gsparams::DictList> > *pairlist;
 };
 %token <val> NUMBER
 %token <sym> STRING
 %type <onevalue> OBJECT ELEMENTS ARRAY
-%type <onepair> PAIR
+%type <onevalue> PAIR
 %type <onevalue> VALUE
-%type <pairlist> MEMBERS
+%type <onevalue> MEMBERS
 %type <sym> COMMA
 %left O_BEGIN O_END A_BEGIN A_END
 %left COMMA
@@ -50,21 +49,23 @@ START: ARRAY {
   }
 ;
 OBJECT: O_BEGIN O_END {
-    $$.sym = std::string("{}");
+    //$$.sym = std::string("{}");
   }
 | O_BEGIN MEMBERS O_END {
     //$$=
   }
 ;
 MEMBERS: PAIR {
-    $$ = $1;
+    //$$ = foo;
   }
 | PAIR COMMA MEMBERS {
     //$$ =
   }
 ;
 PAIR: STRING COLON VALUE {
-    $$ = std::make_pair($1,$3);
+    DictList *myretval = new DictList();
+    myretval->set(*$1,*$3);
+    $$ = myretval;
   }
 ;
 ARRAY: A_BEGIN A_END {
@@ -73,27 +74,25 @@ ARRAY: A_BEGIN A_END {
     $$ = retval;
   }
 | A_BEGIN ELEMENTS A_END {
-    //$$ = (char *)malloc(sizeof(char)*(1+strlen($2)+1+1));
+    $$ = $2
 }
 ;
 ELEMENTS: VALUE {
-    $$ = $1;
+    //$$ = $1;
   }
 | VALUE COMMA ELEMENTS {
-    for(int i = 0;i<$1.size();i++){
-        $1.push_back($2[i]);
-    }
-    $$ = $1;
+
+    //$$ = $1;
   }
 ;
-VALUE: NUMBER {$$=new DictList(yylval.doublevalue);}
+VALUE: NUMBER {$$=new DictList(yylval.val);}
 | OBJECT {$$=$1;}
 | ARRAY {$$=$1;}
 ;
 %%
 //-- FUNCTION DEFINITIONS ---------------------------------
 #include <iostream>
-#int main()
+int main()
 {
   yyparse();
     return 0;

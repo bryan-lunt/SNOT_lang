@@ -33,7 +33,7 @@ DBL_QUOTE ["]
 %%
 {DBL_QUOTE}{DBL_QUOTE} |
 {DBL_QUOTE}{CHARS}{DBL_QUOTE} {
-    yylval.sym=std::string(yytext);
+    yylval.sym=new std::string(yytext);
     return STRING;
 };
 {NUMBER} {
