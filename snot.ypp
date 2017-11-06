@@ -130,7 +130,7 @@ int main(){
         std::vector<double> thevals;
 
 
-        the_final.traverse(thevals);
+        the_final.traverse(&thevals);
 
 
         for(int i = 0;i<thevals.size();i++){
