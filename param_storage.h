@@ -31,10 +31,9 @@ SOFTWARE.
 #include <map>
 #include <string>
 #include <stack>
+#include <sstream>
 
-#ifdef GS_PARAM_STORAGE_DEBUG
 #include <iostream>
-#endif
 
 namespace gsparams {
 
@@ -52,6 +51,7 @@ class DictList {
 
         typedef std::map<std::string,int> dictlist_map_t;
         dictlist_map_t *map_storage;
+        std::vector<std::string> *map_key_storage; //when we want to output, we need to be able to iterate over keys too.
         std::vector<DictList> *list_storage; //only primitive values lack list storage.
 
         inline void undecided_to_dict_else_error(){
@@ -59,6 +59,7 @@ class DictList {
             }if(this->my_type == undecided){
                 list_storage = new std::vector<DictList>(0);
                 map_storage = new dictlist_map_t();
+                map_key_storage = new std::vector<std::string>(0);
                 this->my_type = dict;
             }else{
                 throw std::runtime_error("Already upgraded");
@@ -69,6 +70,8 @@ class DictList {
             if(this->my_type == list){return;
             }if(this->my_type == undecided){
                 list_storage = new std::vector<DictList>(0);
+                map_storage = NULL;
+                map_key_storage = NULL;
                 this->my_type = list;
             }else{
                 throw std::runtime_error("Already upgraded");
@@ -95,6 +98,11 @@ class DictList {
             if(NULL != map_storage){
                 delete map_storage;
                 map_storage = NULL;
+            }
+
+            if(NULL != map_key_storage){
+                delete map_key_storage;
+                map_key_storage = NULL;
             }
 
             if(NULL != list_storage){
@@ -142,6 +150,18 @@ class DictList {
                 #endif
             }
 
+            if(NULL != other.map_key_storage){
+                if(other.my_type == undecided || other.my_type == primitive){
+                    throw std::runtime_error("Non-null map storage in an undecided or primitive type. This should never happen!");
+                }
+
+                this->map_key_storage = new std::vector<std::string>(0);
+                int o_mks_n = other.map_key_storage->size();
+                for(int i = 0;i<o_mks_n;i++){
+                    this->map_key_storage->push_back(other.map_key_storage->at(i));
+                }
+            }
+
             if(NULL != other.map_storage){
                 #ifdef GS_PARAM_STORAGE_DEBUG
                 std::cerr << "map";
@@ -168,22 +188,24 @@ class DictList {
             #endif
         }
     public:
-        inline DictList() : my_type(undecided), map_storage(NULL), list_storage(NULL), my_value(0.0) {
+        inline DictList() : my_type(undecided), map_storage(NULL), map_key_storage(NULL), list_storage(NULL), my_value(0.0) {
             my_type = undecided;
             map_storage = NULL;
             list_storage = NULL;
+            map_key_storage = NULL;
             my_value = 0.0;//TODO: can we make this nan or some other defensive value?
         }
-        inline DictList(dictlist_primitive_t in) : my_type(undecided), map_storage(NULL), list_storage(NULL), my_value(0.0)  {
+        inline DictList(dictlist_primitive_t in) : my_type(undecided), map_storage(NULL), map_key_storage(NULL), list_storage(NULL), my_value(0.0)  {
             my_type = primitive;
             map_storage = NULL;
             list_storage = NULL;
+            map_key_storage = NULL;
             my_value = in;
         }
         //copy constructor
 
 
-        inline DictList(const DictList &other) : my_type(undecided), map_storage(NULL), list_storage(NULL), my_value(0.0)  {
+        inline DictList(const DictList &other) : my_type(undecided), map_storage(NULL), map_key_storage(NULL), list_storage(NULL), my_value(0.0)  {
             this->copy_helper(other);
         }
 
@@ -208,6 +230,10 @@ class DictList {
         inline ~DictList(){
             if(NULL != map_storage){
                 delete map_storage;
+            }
+
+            if(NULL != map_key_storage){
+                delete map_key_storage;
             }
 
             if(NULL != list_storage){
@@ -282,6 +308,7 @@ class DictList {
             if(this->map_storage->end() == key_to_int){
                 //key does not exist
                 this->list_storage->push_back(in);
+                this->map_key_storage->push_back(key);
                 (*(this->map_storage))[key] = (int)(this->list_storage->size()-1);
             }else{
                 //The key already exists, so we need to replace it.
@@ -311,7 +338,7 @@ class DictList {
             if(this->map_storage->end() == key_to_int){
                 //
                 DictList tmp;
-                this->set(key,tmp);
+                this->set(key,tmp);//should insert into the key list if necessary
 
                 //Try again using the same search code.
                 key_to_int = this->map_storage->find(key);
@@ -524,10 +551,59 @@ class iterator : public std::forward_iterator_tag {
         return this->v();
     }
 
+    friend std::ostream& operator<<(std::ostream& os, const DictList& obj);
+
+    inline std::string str(){
+        std::stringstream ss;
+        ss.clear();
+        ss << *this;
+        std::string foobar(ss.str());
+        return foobar;
+    }
 
 };//END OF DICTLIST
 
+    inline std::ostream& operator<<(std::ostream& os, const DictList& obj)
+    {
+        // write obj to stream
+        if(primitive == obj.my_type){
+            os << obj.v();
+            return os;
+        }
 
+        if(dict == obj.my_type){
+            os << "{";
+                int n_members = obj.size();
+                if(n_members > 0){
+                    os << obj.map_key_storage->at(0) << ":" << obj.list_storage->at(0);
+
+                    for(int i = 1;i<n_members;i++){
+                        os << "," << obj.map_key_storage->at(i) << ":" << obj.list_storage->at(i);
+                    }
+
+                }
+            os << "}";
+            return os;
+        }else if(list == obj.my_type){
+            os << "[";
+            int n_members = obj.size();
+            if(n_members > 0){
+                os << obj.list_storage->at(0);
+
+                for(int i = 1;i<n_members;i++){
+                    os << "," << obj.list_storage->at(i);
+                }
+
+            }
+
+            os << "]";
+        }else if(primitive == obj.my_type){
+            os << obj.v();
+        }
+
+
+        return os;
+    }
 
 }
 

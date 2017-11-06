@@ -14,6 +14,7 @@ int main(){
 
     DictList my_dictlist = parse_dictlist(testin);
 
+
         std::vector<double> thevals(0);
 
 
@@ -26,5 +27,7 @@ int main(){
         }
         thevals.clear();
 
+
+        cout << my_dictlist.str() << endl;
     return 0;
 }
