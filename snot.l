@@ -1,5 +1,6 @@
 %{
     #include<stdio.h>
+    #include <string.h>
 
     #include "param_storage.h"
 
@@ -34,7 +35,7 @@ DBL_QUOTE ["]
 %%
 {DBL_QUOTE}{DBL_QUOTE} |
 {DBL_QUOTE}{CHARS}{DBL_QUOTE} {
-    yylval.sym=new std::string(yytext);
+    yylval.sym=new std::string(yytext,1,strlen(yytext)-2);
     return STRING;
 };
 {NUMBER} {
