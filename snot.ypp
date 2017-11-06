@@ -19,6 +19,7 @@ int yylex();
 int yyerror(const char *p) { cerr << "Parse error!" << endl; }
 %}
 
+
 %union {
   double val;
   std::string *sym;

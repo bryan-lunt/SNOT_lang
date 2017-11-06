@@ -380,7 +380,7 @@ class DictList {
             this->traverse_internal(target);
         }
 
-        inline void populate(std::vector< dictlist_primitive_t >& source) {
+        inline void populate(const std::vector< dictlist_primitive_t >& source) {
             iterator myitr = this->begin();
             iterator my_end = this->end();
             //std::vector< dictlist_primitive_t >::iterator src_itr = source.begin();
@@ -575,10 +575,10 @@ class iterator : public std::forward_iterator_tag {
             os << "{";
                 int n_members = obj.size();
                 if(n_members > 0){
-                    os << obj.map_key_storage->at(0) << ":" << obj.list_storage->at(0);
+                    os << '"' << obj.map_key_storage->at(0) << '"' << ":" << obj.list_storage->at(0);
 
                     for(int i = 1;i<n_members;i++){
-                        os << "," << obj.map_key_storage->at(i) << ":" << obj.list_storage->at(i);
+                        os << "," << '"' << obj.map_key_storage->at(i) << '"' << ":" << obj.list_storage->at(i);
                     }
 
                 }
