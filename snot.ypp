@@ -27,8 +27,8 @@ int yyerror(const char *p) { cerr << "Parse error!" << endl; }
 //-- you specify semantic value types for tokens and
 //-- non-terminals.
 %union {
-  double doublevalue;
-  char *sym;
+  double val;
+  std::string *sym;
   gsparams::DictList *onevalue;
   std::pair<std::string, gsparams::DictList> *onepair;
   std::vector< std::pair<std::string, gsparams::DictList> > *pairlist;
@@ -50,7 +50,7 @@ START: ARRAY {
   }
 ;
 OBJECT: O_BEGIN O_END {
-    $$ = "{}";
+    $$.sym = std::string("{}");
   }
 | O_BEGIN MEMBERS O_END {
     //$$=
@@ -97,4 +97,4 @@ VALUE: NUMBER {$$=new DictList(yylval.doublevalue);}
 {
   yyparse();
     return 0;
-    }
+}

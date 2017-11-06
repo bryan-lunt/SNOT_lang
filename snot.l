@@ -1,7 +1,10 @@
 %{
     #include<stdio.h>
+
+    #include "param_storage.h"
+
     #include "snot.tab.hpp"
-    char *strclone(char *str);
+
     /*
     #define STRING "str"
     #define NUMBER "number"
@@ -30,11 +33,11 @@ DBL_QUOTE ["]
 %%
 {DBL_QUOTE}{DBL_QUOTE} |
 {DBL_QUOTE}{CHARS}{DBL_QUOTE} {
-    yylval=strclone(yytext);
+    yylval.sym=std::string(yytext);
     return STRING;
 };
 {NUMBER} {
-    yylval=atof(yytext);
+    yylval.val=atof(yytext);
     return NUMBER;
 }
 \{ {
@@ -67,10 +70,3 @@ DBL_QUOTE ["]
     exit(0);
 }
 %%
-char *strclone(char *str)
-{
-    int len = strlen(str);
-    char *clone = (char *)malloc(sizeof(char)*(len+1));
-    strcpy(clone,str);
-    return clone;
-}
