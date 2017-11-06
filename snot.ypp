@@ -2,6 +2,8 @@
 #include <iostream>
 #include <string>
 #include <map>
+#include <vector>
+#include <utility>
 #include <cstdlib>
 
 #include "param_storage.h"
@@ -11,6 +13,7 @@ using namespace std;
 using namespace gsparams;
 
 //-- Lexer prototype required by bison, aka getNextToken()
+DictList *last_object;
 int yylex();
 int yyerror(const char *p) { cerr << "Parse error!" << endl; }
 %}
@@ -31,13 +34,15 @@ int yyerror(const char *p) { cerr << "Parse error!" << endl; }
   double val;
   std::string *sym;
   gsparams::DictList *onevalue;
+  std::pair< std::string , gsparams::DictList> *onepair;
+  std::vector< std::pair< std::string , gsparams::DictList> > *pairlist;
 };
 %token <val> NUMBER
 %token <sym> STRING
 %type <onevalue> OBJECT ELEMENTS ARRAY
-%type <onevalue> PAIR
+%type <onepair> PAIR
 %type <onevalue> VALUE
-%type <onevalue> MEMBERS
+%type <pairlist> MEMBERS
 %type <sym> COMMA
 %left O_BEGIN O_END A_BEGIN A_END
 %left COMMA
@@ -46,26 +51,37 @@ int yyerror(const char *p) { cerr << "Parse error!" << endl; }
 START: ARRAY {
   }
 | OBJECT {
+    last_object = $1;
   }
 ;
 OBJECT: O_BEGIN O_END {
-    //$$.sym = std::string("{}");
+    $$ = new DictList();
   }
 | O_BEGIN MEMBERS O_END {
-    //$$=
+    DictList *retval = new DictList();
+    std::vector< std::pair< std::string , gsparams::DictList> >::iterator itr;
+    for(itr = $2->begin();itr!= $2->end();++itr){
+        retval->set(itr->first,itr->second);
+    }
+    $$=retval;
   }
 ;
 MEMBERS: PAIR {
-    //$$ = foo;
+    std::vector< std::pair< std::string , gsparams::DictList> > *retptr = new std::vector< std::pair< std::string , gsparams::DictList> >();
+    retptr->push_back(*$1);
+    $$ = retptr;
   }
 | PAIR COMMA MEMBERS {
-    //$$ =
+    std::vector< std::pair< std::string , gsparams::DictList> > *retptr = new std::vector< std::pair< std::string , gsparams::DictList> >();
+    *retptr = *$3;
+    retptr->insert(retptr->begin(), *$1);
+    $$ = retptr;
   }
 ;
 PAIR: STRING COLON VALUE {
-    DictList *myretval = new DictList();
-    myretval->set(*$1,*$3);
-    $$ = myretval;
+    std::pair<std::string, DictList> *retpair = new std::pair<std::string, DictList>;
+    *retpair = std::make_pair(*$1, *$3);
+    $$ = retpair;
   }
 ;
 ARRAY: A_BEGIN A_END {
@@ -74,15 +90,23 @@ ARRAY: A_BEGIN A_END {
     $$ = retval;
   }
 | A_BEGIN ELEMENTS A_END {
-    $$ = $2
+    $$ = $2;
 }
 ;
 ELEMENTS: VALUE {
-    //$$ = $1;
+    DictList *retval = new DictList();
+    retval->undecided_to_list_else_error();
+    retval->push_back(*$1);
+    $$ = retval;
   }
 | VALUE COMMA ELEMENTS {
-
-    //$$ = $1;
+    DictList *retval = new DictList();
+    retval->undecided_to_list_else_error();
+    retval->push_back(*$1);
+    for(int i = 0;i<$3->size();i++){
+        retval->push_back($3->at(i));
+    }
+    $$ = retval;
   }
 ;
 VALUE: NUMBER {$$=new DictList(yylval.val);}
@@ -94,6 +118,16 @@ VALUE: NUMBER {$$=new DictList(yylval.val);}
 #include <iostream>
 int main()
 {
-  yyparse();
+    string testin="{\"tfs\":{\"A\":[1.1,1.2,1.3],\"B\":[2.1,2.2,2.3]}}";
+    yy_scan_string(testin.c_str());
+    if(0== yyparse()){
+        cout << "success" << endl;
+
+        cout << last_object->size() << endl;
+    }else{
+        cout << "failrure" << endl;
+    }
+
+
     return 0;
 }

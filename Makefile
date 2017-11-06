@@ -7,6 +7,9 @@ snot.lex.c : snot.l
 snot:	snot.tab.cpp snot.tab.hpp snot.lex.c
 	g++ -o snot snot.tab.cpp snot.lex.c -ll
 
+clean:
+	rm snot snot.tab.* snot.lex.*
+
 default:
 	bison -d snot.ypp
 	flex -o snot.lex.cpp --c++ snot.l
