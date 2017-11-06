@@ -1,3 +1,6 @@
+
+all: snot
+
 snot.tab.cpp snot.tab.hpp : snot.ypp
 	bison -d snot.ypp
 
@@ -9,9 +12,3 @@ snot:	snot.tab.cpp snot.tab.hpp snot.lex.cpp snot.yy.hpp
 
 clean:
 	rm snot snot.tab.* snot.lex.*
-
-default:
-	bison -d snot.ypp
-	flex -o snot.lex.cpp --c++ snot.l
-	g++ -o snot snot.tab.cpp snot.lex.cpp
-	g++ -o snot snot.tab.cpp snot.lex.c -ll
