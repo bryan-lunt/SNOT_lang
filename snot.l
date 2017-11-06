@@ -1,6 +1,6 @@
 %{
     #include<stdio.h>
-    #include "json.tab.h"
+    #include "snot.tab.hpp"
     char *strclone(char *str);
     /*
     #define STRING "str"

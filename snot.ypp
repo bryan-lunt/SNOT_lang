@@ -2,7 +2,11 @@
 #include <iostream>
 #include <string>
 #include <map>
-#include <cstdlib> //-- I need this for atoi
+#include <cstdlib>
+
+#include "param_storage.h"
+
+ //-- I need this for atoi
 using namespace std;
 
 //-- Lexer prototype required by bison, aka getNextToken()
@@ -23,13 +27,19 @@ int yyerror(const char *p) { cerr << "Parse error!" << endl; }
 //-- you specify semantic value types for tokens and
 //-- non-terminals.
 %union {
-  long double val;
+  double doublevalue;
   char *sym;
-  void *object;
+  gsparams::DictList *onevalue;
+  std::pair<std::string, gsparams::DictList> *onepair;
+  std::vector< std::pair<std::string, gsparams::DictList> > *pairlist;
 };
 %token <val> NUMBER
 %token <sym> STRING
-%type <object> OBJECT MEMBERS ELEMENTS VALUE PAIR ARRAY
+%type <onevalue> OBJECT ELEMENTS ARRAY
+%type <onepair> PAIR
+%type <onevalue> VALUE
+%type <pairlist> MEMBERS
+%type <sym> COMMA
 %left O_BEGIN O_END A_BEGIN A_END
 %left COMMA
 %left COLON
@@ -54,11 +64,13 @@ MEMBERS: PAIR {
   }
 ;
 PAIR: STRING COLON VALUE {
-    //$$ =
+    $$ = std::make_pair($1,$3);
   }
 ;
 ARRAY: A_BEGIN A_END {
-    //$$ = (char *)malloc(sizeof(char)*(2+1));
+    DictList *retval = new DictList();
+    retval->undecided_to_list_else_error();
+    $$ = retval;
   }
 | A_BEGIN ELEMENTS A_END {
     //$$ = (char *)malloc(sizeof(char)*(1+strlen($2)+1+1));
@@ -68,11 +80,21 @@ ELEMENTS: VALUE {
     $$ = $1;
   }
 | VALUE COMMA ELEMENTS {
-    //$$ =
+    for(int i = 0;i<$1.size();i++){
+        $1.push_back($2[i]);
+    }
+    $$ = $1;
   }
 ;
-VALUE: NUMBER {$$=yylval;}
+VALUE: NUMBER {$$=new DictList(yylval.doublevalue);}
 | OBJECT {$$=$1;}
 | ARRAY {$$=$1;}
 ;
 %%
+//-- FUNCTION DEFINITIONS ---------------------------------
+#include <iostream>
+#int main()
+{
+  yyparse();
+    return 0;
+    }
