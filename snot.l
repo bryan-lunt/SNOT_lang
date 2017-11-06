@@ -15,6 +15,7 @@
     #define COMMA "comma"
     */
 %}
+
 DIGIT1to9 [1-9]
 DIGIT [0-9]
 DIGITS {DIGIT}+

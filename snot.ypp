@@ -7,6 +7,7 @@
 #include <cstdlib>
 
 #include "param_storage.h"
+#include "snot.yy.hpp"
 
  //-- I need this for atoi
 using namespace std;
@@ -118,16 +119,32 @@ VALUE: NUMBER {$$=new DictList(yylval.val);}
 #include <iostream>
 int main()
 {
-    string testin="{\"tfs\":{\"A\":[1.1,1.2,1.3],\"B\":[2.1,2.2,2.3]}}";
+    string testin=std::string("{\"tfs\":{\"A\":[1.1,1.2,1.3],\"B\":[2.1,2.2,2.3]}}");
+
+    //yyscan_t scanner;
+    //YY_BUFFER_STATE buf;
+    //yylex_init(&scanner);
+    //buf = yy_scan_string("replace me with the string youd like to scan", scanner);
+
     yy_scan_string(testin.c_str());
+
     if(0== yyparse()){
         cout << "success" << endl;
 
-        cout << last_object->size() << endl;
+        DictList the_final = *last_object;
+
+        std::vector<double> thevals;
+        the_final.traverse(&thevals);
+        for(int i = 0;i<thevals.size();i++){
+            cout << thevals[i] << " ";
+        }
+        cout << endl;
     }else{
         cout << "failrure" << endl;
     }
 
-
+    //yylex(scanner);
+    //yy_delete_buffer(buf, scanner);
+    //yylex_destroy(scanner);
     return 0;
 }
