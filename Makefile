@@ -5,7 +5,7 @@ snot.lex.cpp snot.yy.hpp: snot.l
 	flex -o snot.lex.cpp --header-file=snot.yy.hpp snot.l
 
 snot:	snot.tab.cpp snot.tab.hpp snot.lex.c snot.yy.hpp
-	g++ -o snot snot.tab.cpp snot.lex.cpp -ll
+	g++ -g -o snot snot.tab.cpp snot.lex.cpp -ll
 
 clean:
 	rm snot snot.tab.* snot.lex.*
