@@ -87,6 +87,9 @@ class DictList {
     //protected:
         inline void traverse_internal(std::vector< dictlist_primitive_t >* target) const {
             //public function has already cleared and setup the beginnigs of the target vector.
+            if(undecided == this->my_type){
+                return;
+            }
 
             if(primitive == this->my_type){
                 target->push_back(this->v());
@@ -98,6 +101,27 @@ class DictList {
                 this->list_storage.at(i).traverse_internal(target);
                 //shoudl be able to overwrite some operator with an iterator and
             }
+        }
+
+        inline int populate_internal(const std::vector< dictlist_primitive_t >& target,int starting_at) {
+            //public function has already cleared and setup the beginnigs of the target vector.
+            if(undecided == this->my_type){
+                return 0;
+            }
+
+            if(primitive == this->my_type){
+                this->my_value = target[starting_at];
+                return 1;
+            }
+
+            //some type that stores things
+
+            int num_consumed = 0;
+            int n = this->list_storage.size();
+            for(int i = 0; i < n; i++){
+                num_consumed += this->list_storage.at(i).populate_internal(target,starting_at+num_consumed);
+            }
+            return num_consumed;
         }
 
         inline void clear_helper(){
@@ -302,23 +326,11 @@ class DictList {
         }
 
         inline void populate(const std::vector< dictlist_primitive_t >& source) {
-            iterator myitr = this->begin();
-            iterator my_end = this->end();
-            //std::vector< dictlist_primitive_t >::iterator src_itr = source.begin();
-            //std::vector< dictlist_primitive_t >::iterator src_end = source.end();
-            int n = source.size();
-            for(int i = 0;i<n;i++){
-                if(my_end == myitr){
-                    throw std::range_error("The size of this datastructure and the source vector differ.");
-                }
-
-                (*myitr) = source[i];//(*src_itr);
-                ++myitr;
-                //++src_itr;
-            }
+            int num_consumed = populate_internal(source,0);
+            //do I want to check that the number consumed is right?
         }
 
-        inline bool populate_or_revert(std::vector< dictlist_primitive_t >& source) {
+        inline bool populate_or_revert(const std::vector< dictlist_primitive_t >& source) {
             std::vector< dictlist_primitive_t > tmp(0);
             this->traverse(&tmp);
 
@@ -382,35 +394,53 @@ class iterator : public std::forward_iterator_tag {
                 return *this;
             }
 
-            my_stack.top().second++;
+            /* COROUTINE-like code.
+            So, we really want a coroutine here, and we'd like it to be recursive.
+            That's unrolled and done below. Pseudocode:
 
-            while(my_stack.size() > 0 && my_stack.top().second >= my_stack.top().first->size()){
-                my_stack.pop();
-                if(my_stack.size() > 0){
-                    my_stack.top().second++;
-                }
-            }
+            traverse(X):
+                for o in X:
+                    if( o is container ):
+                        traverse(o)
+                    elif( o is primitive ):
+                        yield o
+                    elif( o is undef ):
+                        continue #skip over these
 
-            if(my_stack.size() <= 0){
-                //done, off end.
-                return *this;
-            }
-
-            /*Now, we are either pointing off the end, or at another DictList.
-            If the new dictlist we are pointing at is not primitive or undecided,
-            we need to add it to the stack and begin traversing it.
             */
-            while(true){
+
+            bool loop_continues = false;
+            while(my_stack.size() > 1 && loop_continues){
+                my_stack.top().second++;
+                if(my_stack.top().second >= my_stack.top().first->size()){
+                    //primitives will never be on the stack, so this is ok.
+                    //The stack is only those containers that we have descended into.
+                    //So, I guess that implies that iterators for undecided and primitive types need to be initialized to .end();
+                    my_stack.pop();
+                    loop_continues = true;
+                    continue;
+                }
+
+                //We're looking at the next subobject of the thing on top of the stack.
+                //If it is another compound object, we need to descend into it( put it on top of the stack. )
                 DictList *current_pointed_element = &(my_stack.top().first->at(my_stack.top().second));
                 DictListType check_type = current_pointed_element->my_type;
 
-                if(undecided == check_type || primitive == check_type){
-                    break;
+                //some compound type, gets pushed to the stack, equivalent to recursion
+                if(undecided != check_type && primitive != check_type){
+                    my_stack.push(std::make_pair(current_pointed_element,-1));
+                    loop_continues = true;
+                    continue;//need to descend into that.
                 }
 
-                if(undecided != check_type && primitive != check_type){
-                    my_stack.push(std::make_pair(current_pointed_element,0));
-                    continue;
+                if(undecided == check_type){
+                    //Yes, iterators now iterate over undecided.
+                    loop_continues = false;
+                    break;
+                }
+                if(primitive == check_type){
+                    loop_continues = false;
+                    break;
                 }
 
                 throw std::runtime_error("Never make it here.");
