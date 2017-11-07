@@ -11,4 +11,8 @@ I benefit from this tutorial: https://www.usna.edu/Users/cs/lmcdowel/courses/si4
 In future versions, I hope to benefit from this tutorial and make the grammer create better C++ code.
 https://www.gnu.org/software/bison/manual/html_node/A-Complete-C_002b_002b-Example.html
 
+https://github.com/linse/flex-bison-cpp-example
+
+https://www.gnu.org/software/automake/manual/html_node/Yacc-and-Lex.html
+
 The ANTLR4 grammar was cut down from the JSON grammar at https://raw.githubusercontent.com/antlr/grammars-v4/master/json/JSON.g4
