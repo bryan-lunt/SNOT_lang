@@ -5,9 +5,11 @@
 
     #include "param_storage.h"
 
+
     #include "snot.tab.hpp"
 
-    /*
+
+/*    
     #define STRING "str"
     #define NUMBER "number"
     #define O_BEGIN "o_begin"
@@ -15,7 +17,7 @@
     #define A_BEGIN "a_begin"
     #define A_END "a_end"
     #define COMMA "comma"
-    */
+  */  
 %}
 
 DIGIT1to9 [1-9]
