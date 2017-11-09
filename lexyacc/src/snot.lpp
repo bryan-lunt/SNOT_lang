@@ -18,6 +18,7 @@
     #define A_END "a_end"
     #define COMMA "comma"
   */  
+
 %}
 
 DIGIT1to9 [1-9]
@@ -75,3 +76,7 @@ DBL_QUOTE ["]
     exit(0);
 }
 %%
+
+int yywrap(void) {
+	return 1;
+}

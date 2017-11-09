@@ -19,7 +19,7 @@ snot.tab.o snot.lex.o:	snot.tab.cpp snot.tab.hpp snot.lex.cpp snot.yy.hpp param_
 
 test: test.cpp snot.h param_storage.h ./lib/libsnot.a
 	g++ -c test.cpp
-	g++ -o test test.o -L./lib -lsnot -ll -ly
+	g++ -o test test.o -L./lib -lsnot
 
 clean:
 	rm snot snot.tab.* snot.lex.*
