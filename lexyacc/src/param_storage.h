@@ -345,6 +345,45 @@ class DictList {
             return false;
         }
 
+        /**
+        *   Create a new DictList hierarchy using values from another, but ordering according to this.
+        */
+        inline DictList use_as_prototype(DictList &other){
+            DictList ret_list;
+
+            if(undecided == this->my_type || primitive == this->my_type){
+                if(this->my_type != other.my_type){
+                    throw std::runtime_error("Could not use as prototype (mismatched types) ");
+                }
+                ret_list = DictList(other);
+                return ret_list;
+            }
+
+            if(list == this->my_type){
+                if(this->my_type != other.my_type) { throw std::runtime_error("Could not use as prototype (mismatched types) "); }
+                if(this->size() != other.size()) { throw std::runtime_error("Could not use as prototype (mismatched length) "); }
+                for(int i = 0;i<this->list_storage.size();i++){
+                    ret_list.push_back(this->at(i).use_as_prototype(other.at(i)));
+                }
+
+                return ret_list;
+            }
+
+            if(dict == this->my_type){
+                if(this->my_type != other.my_type) { throw std::runtime_error("Could not use as prototype (mismatched types) "); }
+                if(this->size() != other.size()) { throw std::runtime_error("Could not use as prototype (mismatched length) "); }
+                for(int i = 0;i<this->map_key_storage.size();i++){
+                    std::string the_key = this->map_key_storage.at(i);
+                    DictList blah = this->at(the_key).use_as_prototype(other.at(the_key));
+                    ret_list.set(the_key, blah);
+                }
+
+                return ret_list;
+            }
+
+            throw std::logic_error("Should not make it to the bottom of DictList::use_as_prototype.");
+            return ret_list;
+        }
 
 class iterator : public std::forward_iterator_tag {
     protected:
@@ -409,8 +448,9 @@ class iterator : public std::forward_iterator_tag {
 
             */
 
-            bool loop_continues = false;
-            while(my_stack.size() > 1 && loop_continues){
+            bool loop_continues = true;
+            while(my_stack.size() > 0 && loop_continues){
+                loop_continues = false;
                 my_stack.top().second++;
                 if(my_stack.top().second >= my_stack.top().first->size()){
                     //primitives will never be on the stack, so this is ok.
@@ -448,7 +488,6 @@ class iterator : public std::forward_iterator_tag {
             /*Otherwise, we are pointing to a primitive type (or undecided, behaviour not defined)
             */
 
-
             return *this;
         }
 
@@ -472,6 +511,44 @@ class iterator : public std::forward_iterator_tag {
 
 
             throw std::runtime_error("Invalid iterator state.");
+        }
+
+        /**
+        * Return the JSONPath to the current position of this iterator.
+        */
+        inline std::string get_path(){
+            std::string path_str = "";
+            if(my_stack.size() <= 0){
+                return std::string("$");
+            }
+
+            //We can't access inside the stack easily.
+            //I'd be tempted to change the stack storage to a vector,
+            //but looking inside the stack probably doesn't happen often.
+
+            std::stack< std::pair<DictList*, int> > tmp_stack(my_stack);
+
+            while(tmp_stack.size() != 0){
+
+                DictList *top_container = tmp_stack.top().first;
+                int top_index = tmp_stack.top().second;
+                tmp_stack.pop();
+
+                if(list == top_container->my_type){
+                    path_str = std::string("[") + std::to_string(top_index) + std::string("]")  + path_str;
+                }else if(dict == top_container->my_type){
+                    path_str = std::string("[\"") + top_container->map_key_storage.at(top_index) + std::string("\"]")  + path_str;
+
+                }else{
+                    throw std::runtime_error("Somehow tried to get a path from invalid iterator");
+                }
+
+
+            }
+
+            path_str = "$" + path_str;
+
+            return path_str;
         }
 
 };//End of declaration of iterator
