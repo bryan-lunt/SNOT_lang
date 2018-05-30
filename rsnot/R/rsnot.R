@@ -1,5 +1,13 @@
 #library("rjson")
 
+snot_load <- function(snot_string) {
+	rjson::fromJSON(snot_string, simplify=FALSE)
+}
+
+snot_dump <- function(snot_object) {
+	rjson::toJSON(snot_object)
+}
+
 #Seems to work
 
 snot_traverse <- function(the_structure) {
