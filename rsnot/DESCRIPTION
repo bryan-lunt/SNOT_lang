@@ -1,0 +1,12 @@
+Package: rsnot
+Type: Package
+Title: Interact with SNOT objects from R
+Version: 1.0
+Date: 2018-05-30
+Author: Bryan J. Lunt
+Maintainer: Bryan J. Lunt <bjlunt2@illinois.edu>
+Description: More about what it does (maybe more than one line)
+Depends: R
+License: MIT License
+Imports:
+	rjson
