@@ -1,14 +1,36 @@
 #library("rjson")
 
+#' Load a SNOT object from a string.
+#' 
+#' 
+#' @param snot_string A string containing a complete SNOT/JSON object.
+#' @return An object built of basic R types reflecting the structure of the SNOT data in the string.
+#' @examples
+#' snot_load('{"a":1.0, "b":[2.0,3.0,{"c":3.14159}]}')
+
 snot_load <- function(snot_string) {
 	rjson::fromJSON(snot_string, simplify=FALSE)
 }
+
+
+#' Dump a SNOT object to a string.
+#' 
+#' 
+#' @param snot_object A hierarchical R object built of basic R datatypes to be dumped to SNOT/JSON.
+#' @return A string representation of the data provided.
+#' @examples
+#' snot_dump(c(1,2,3,4))
 
 snot_dump <- function(snot_object) {
 	rjson::toJSON(snot_object)
 }
 
-#Seems to work
+
+#' Get all the leaf values into a vector.
+#' 
+#' 
+#' @param the_structure  A hierarchical R object built of basic R datatypes (A SNOT object).
+#' @return A vector with all of the ordered values of the leaves of the_structure.
 
 snot_traverse <- function(the_structure) {
     
@@ -54,6 +76,12 @@ snot_populate_helper <- function(the_structure, a_vector){
     return(list(final_structure, number_consumed))
 }
 
+#' Assign values to a SNOT object from values in a vector.
+#' 
+#' 
+#' @param the_structure  A hierarchical R object built of basic R datatypes (A SNOT object).
+#' @param a_vector An ordered vector with all of the values to assign to leaves in the structure.
+#' @return A SNOT object matching the structure of the_structure, but with leaves having values taken from a_vector.
 snot_populate <- function(the_structure, a_vector){
     N = length(a_vector)
     helper_return = tryCatch({

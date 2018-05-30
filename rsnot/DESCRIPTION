@@ -9,3 +9,4 @@ Description: More about what it does (maybe more than one line)
 License: MIT License
 Depends: 
 Imports: rjson
+RoxygenNote: 6.0.1
