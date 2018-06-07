@@ -8,10 +8,9 @@ lib: ./lib/libsnot.a
 
 
 ./src/snot.tab.cpp ./src/snot.tab.hpp : ./src/snot.ypp
-	bison -d ./src/snot.ypp
+	(cd src ; bison -d ./snot.ypp)
 
 ./src/snot.lex.cpp ./src/snot.yy.hpp: ./src/snot.lpp
-	flex -o snot.lex.cpp --header-file=snot.yy.hpp snot.l
 	flex -o ./src/snot.lex.cpp --header-file=./src/snot.yy.hpp ./src/snot.lpp
 
 ./src/snot.tab.o:	./src/snot.tab.cpp ./src/snot.tab.hpp ./src/snot.yy.hpp ./src/param_storage.h
