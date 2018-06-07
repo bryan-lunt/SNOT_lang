@@ -4,21 +4,22 @@ all: lib
 lib: ./lib/libsnot.a
 
 
-snot.tab.cpp snot.tab.hpp : snot.ypp
-	bison -d snot.ypp
+./src/snot.tab.cpp ./src/snot.tab.hpp : ./src/snot.ypp
+	bison -d ./src/snot.ypp
 
-snot.lex.cpp snot.yy.hpp: snot.l
+./src/snot.lex.cpp ./src/snot.yy.hpp: ./src/snot.lpp
 	flex -o snot.lex.cpp --header-file=snot.yy.hpp snot.l
+	flex -o ./src/snot.lex.cpp --header-file=./src/snot.yy.hpp ./src/snot.lpp
 
-snot.tab.o snot.lex.o:	snot.tab.cpp snot.tab.hpp snot.lex.cpp snot.yy.hpp param_storage.h
-	g++ -g -c snot.tab.cpp snot.lex.cpp
+./src/snot.tab.o ./src/snot.lex.o:	./src/snot.tab.cpp ./src/snot.tab.hpp ./src/snot.lex.cpp ./src/snot.yy.hpp ./src/param_storage.h
+	g++ -g -c ./src/snot.tab.cpp ./src/snot.lex.cpp
 
-./lib/libsnot.a: snot.tab.o snot.lex.o
-	ar -rcs ./lib/libsnot.a snot.tab.o snot.lex.o
+./lib/libsnot.a: ./src/snot.tab.o ./src/snot.lex.o
+	ar -rcs ./lib/libsnot.a ./src/snot.tab.o ./src/snot.lex.o
 
-test: test.cpp snot.h param_storage.h ./lib/libsnot.a
-	g++ -c test.cpp
-	g++ -o test test.o -L./lib -lsnot -ll -ly
+test1: ./tests/test1.cpp ./src/snot.h ./src/param_storage.h ./lib/libsnot.a
+	g++ -c ./tests/test1.cpp
+	g++ -o test1 ./tests/test1.o -L./lib -lsnot -ll -ly
 
 clean:
-	rm snot snot.tab.* snot.lex.*
+	rm snot
