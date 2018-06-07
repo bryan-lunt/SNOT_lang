@@ -597,11 +597,6 @@ class iterator : public std::forward_iterator_tag {
     inline std::ostream& operator<<(std::ostream& os, const DictList& obj)
     {
         // write obj to stream
-        if(undecided == obj.my_type){//This means it outputs valid JSON, but what about inputs?
-            os << "null";
-            return os;
-        }
-
         if(primitive == obj.my_type){
             os << obj.v();
             return os;
@@ -633,7 +628,6 @@ class iterator : public std::forward_iterator_tag {
             }
 
             os << "]";
-            return os;
         }else if(primitive == obj.my_type){
             os << obj.v();
         }
