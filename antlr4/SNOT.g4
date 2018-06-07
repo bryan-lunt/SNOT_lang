@@ -1,5 +1,7 @@
 /** Downloaded from https://raw.githubusercontent.com/antlr/grammars-v4/master/json/JSON.g4 */
 /** Taken from "The Definitive ANTLR 4 Reference" by Terence Parr */
+/** The book is available at: https://pragprog.com/book/tpantlr2/the-definitive-antlr-4-reference */
+/** Please keep these header comments in any derived work that substantially draws from this. */
 
 // Derived from http://json.org
 grammar JSON;
