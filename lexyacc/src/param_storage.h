@@ -538,7 +538,8 @@ class iterator : public std::forward_iterator_tag {
                 if(list == top_container->my_type){
 			std::ostringstream int_to_str_ss;
 			int_to_str_ss << top_index;
-                    path_str = std::string("[") + int_to_str_ss.str() + std::string("]")  + path_str;
+                    path_str = std::string("[") + int_to_str_ss.str() + std::string("]")  + path_str;//Deliberate choice to not use std::to_string.
+		    //std::to_string can corrupt values in favor of prefering to write out the decimal point instead of using scientific notation.
                 }else if(dict == top_container->my_type){
                     path_str = std::string("[\"") + top_container->map_key_storage.at(top_index) + std::string("\"]")  + path_str;
 
