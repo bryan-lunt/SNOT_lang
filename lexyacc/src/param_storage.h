@@ -37,28 +37,33 @@ SOFTWARE.
 
 namespace gsparams {
 
+#define dictlist_default_primitive_t double
 #define dictlist_primitive_t double
 #define dictlist_key_t std::string
 
 typedef enum { undecided, primitive, dict, list} DictListType;
 
-class DictList {
+template<typename T> class DictList_BASE;
+template<typename T> inline std::ostream& operator<<(std::ostream& os, const DictList_BASE<T>& obj);
+
+template<typename T = dictlist_primitive_t>
+class DictList_BASE {
     public:
     //private:
     //public:
         DictListType my_type;
-        dictlist_primitive_t my_value;
+        T my_value;
 
         typedef std::map<std::string,int> dictlist_map_t;
         dictlist_map_t map_storage;
         std::vector<std::string> map_key_storage; //when we want to output, we need to be able to iterate over keys too.
-        std::vector<DictList> list_storage; //only primitive values lack list storage.
+        std::vector<DictList_BASE<T> > list_storage; //only primitive values lack list storage.
 
         inline void undecided_to_dict_else_error(){
             if(this->my_type == dict){return;
             }if(this->my_type == undecided){
                 list_storage.clear();
-                //list_storage = new std::vector<DictList>(0);
+                //list_storage = new std::vector<DictList_BASE<T>>(0);
                 map_storage.clear();
                 //map_storage = new dictlist_map_t();
                 map_key_storage.clear();
@@ -73,7 +78,7 @@ class DictList {
             if(this->my_type == list){return;
             }if(this->my_type == undecided){
                 list_storage.clear();
-                //list_storage = new std::vector<DictList>(0);
+                //list_storage = new std::vector<DictList_BASE<T>>(0);
                 map_storage.clear();
                 //map_storage = NULL;
                 map_key_storage.clear();
@@ -85,7 +90,7 @@ class DictList {
         }
 
     //protected:
-        inline void traverse_internal(std::vector< dictlist_primitive_t >* target) const {
+        inline void traverse_internal(std::vector< T >* target) const {
             //public function has already cleared and setup the beginnigs of the target vector.
             if(undecided == this->my_type){
                 return;
@@ -103,7 +108,7 @@ class DictList {
             }
         }
 
-        inline int populate_internal(const std::vector< dictlist_primitive_t >& target,int starting_at) {
+        inline int populate_internal(const std::vector< T >& target,int starting_at) {
             //public function has already cleared and setup the beginnigs of the target vector.
             if(undecided == this->my_type){
                 return 0;
@@ -132,7 +137,7 @@ class DictList {
             this->my_type = undecided;
         }
 
-        inline void copy_helper(const DictList &other){
+        inline void copy_helper(const DictList_BASE &other){
 
             this->my_type = other.my_type;
             this->my_value = other.my_value;
@@ -143,14 +148,14 @@ class DictList {
 
         }
     public:
-        inline DictList() : my_type(undecided), map_storage(), map_key_storage(), list_storage(), my_value(0.0) {
+        inline DictList_BASE() : my_type(undecided), map_storage(), map_key_storage(), list_storage(), my_value(0.0) {
             my_type = undecided;
             //map_storage = NULL;
             //list_storage = NULL;
             //map_key_storage = NULL;
             my_value = 0.0;//TODO: can we make this nan or some other defensive value?
         }
-        inline DictList(dictlist_primitive_t in) : my_type(undecided), map_storage(), map_key_storage(), list_storage(), my_value(0.0)  {
+        inline DictList_BASE(T in) : my_type(undecided), map_storage(), map_key_storage(), list_storage(), my_value(0.0)  {
             my_type = primitive;
             //map_storage = NULL;
             //list_storage = NULL;
@@ -160,18 +165,18 @@ class DictList {
         //copy constructor
 
 
-        inline DictList(const DictList &other) : my_type(undecided), map_storage(), map_key_storage(), list_storage(), my_value(0.0)  {
+        inline DictList_BASE(const DictList_BASE &other) : my_type(undecided), map_storage(), map_key_storage(), list_storage(), my_value(0.0)  {
             this->copy_helper(other);
         }
 
-        inline DictList& operator=(const DictList &other){
+        inline DictList_BASE& operator=(const DictList_BASE &other){
             this->clear_helper();
 
             this->copy_helper(other);
             return *this;
         }
 
-        inline DictList& operator=(const dictlist_primitive_t &other){
+        inline DictList_BASE& operator=(const T &other){
             if(undecided != this->my_type && primitive != this->my_type){
                 throw std::runtime_error("Attempt to assign primitive value to nonprimitive, non undecided DictList.");
             }
@@ -182,24 +187,24 @@ class DictList {
             return *this;
         }
 
-        inline ~DictList(){
+        inline ~DictList_BASE(){
         }
 
         class iterator;
 
-        inline dictlist_primitive_t v() const {
+        inline T v() const {
             if(this->my_type != primitive){throw std::runtime_error("Asked value of non primitive");}
             return this->my_value;
         }
 
-        inline void push_back(const DictList& in) {
+        inline void push_back(const DictList_BASE<T>& in) {
             switch(this->my_type){
                 case primitive:
                     throw std::runtime_error("Cannot append to a primitive");
                     break;
                 case undecided:
                     this->my_type = list;
-                    //this->list_storage = new std::vector<DictList>(0);
+                    //this->list_storage = new std::vector<DictList_BASE<T>>(0);
                     this->list_storage.clear();
                 case list:
                     this->list_storage.push_back(in);
@@ -212,15 +217,15 @@ class DictList {
             }
         }
 
-        inline void push_back(dictlist_primitive_t in){
+        inline void push_back(T in){
             #ifdef GS_PARAM_STORAGE_DEBUG
             std::cerr << "append from value" << std::endl;
             #endif
-            DictList indictlist(in);
+            DictList_BASE<T> indictlist(in);
             this->push_back(indictlist);
         }
 
-        inline DictList& at(const int location) {
+        inline DictList_BASE& at(const int location) {
             switch(this->my_type){
 
                 case list:
@@ -240,12 +245,12 @@ class DictList {
         }
 
 
-        inline DictList& operator[](const int location) {
+        inline DictList_BASE& operator[](const int location) {
             return this->at(location);
         }
 
 
-        inline void set(dictlist_key_t key, DictList& in){
+        inline void set(dictlist_key_t key, DictList_BASE& in){
             undecided_to_dict_else_error();
             if(this->my_type != dict){throw std::runtime_error("Not a dictionary.");}
             //What if the value already exists?
@@ -261,12 +266,12 @@ class DictList {
             }
         }
 
-        inline void set(dictlist_key_t key, dictlist_primitive_t in){
-            DictList indictlist(in);
+        inline void set(dictlist_key_t key, T in){
+            DictList_BASE<T> indictlist(in);
             this->set(key,indictlist);
         }
 
-        inline DictList& at(dictlist_key_t key) {
+        inline DictList_BASE& at(dictlist_key_t key) {
             if(dict != this->my_type){
                 throw std::runtime_error("Can't us this as a dictionary.");
             }
@@ -277,12 +282,12 @@ class DictList {
             return this->list_storage.at(key_to_int->second);//vector::at() in C++98
         }
 
-        inline DictList& operator[](dictlist_key_t key) {
+        inline DictList_BASE& operator[](dictlist_key_t key) {
             undecided_to_dict_else_error();
             dictlist_map_t::iterator key_to_int = this->map_storage.find(key);
             if(this->map_storage.end() == key_to_int){
                 //
-                DictList tmp;
+                DictList_BASE<T> tmp;
                 this->set(key,tmp);//should insert into the key list if necessary
 
                 //Try again using the same search code.
@@ -295,7 +300,7 @@ class DictList {
             return this->list_storage.at(key_to_int->second);
         }
 
-        inline DictList& operator[](const char* key){
+        inline DictList_BASE<T>& operator[](const char* key){
             return this->operator[](dictlist_key_t(key));
         }
 
@@ -315,7 +320,7 @@ class DictList {
             }
         }
 
-        inline void traverse(std::vector< dictlist_primitive_t >* target) const {
+        inline void traverse(std::vector< T >* target) const {
             if(undecided == this->my_type){
                 throw std::runtime_error("Can't traverse undecided");
             }
@@ -325,13 +330,13 @@ class DictList {
             this->traverse_internal(target);
         }
 
-        inline void populate(const std::vector< dictlist_primitive_t >& source) {
+        inline void populate(const std::vector< T >& source) {
             int num_consumed = populate_internal(source,0);
             //do I want to check that the number consumed is right?
         }
 
-        inline bool populate_or_revert(const std::vector< dictlist_primitive_t >& source) {
-            std::vector< dictlist_primitive_t > tmp(0);
+        inline bool populate_or_revert(const std::vector< T >& source) {
+            std::vector< T > tmp(0);
             this->traverse(&tmp);
 
             try{
@@ -346,16 +351,16 @@ class DictList {
         }
 
         /**
-        *   Create a new DictList hierarchy using values from another, but ordering according to this.
+        *   Create a new DictList_BASE hierarchy using values from another, but ordering according to this.
         */
-        inline DictList use_as_prototype(DictList &other){
-            DictList ret_list;
+        inline DictList_BASE use_as_prototype(DictList_BASE &other){
+            DictList_BASE<T> ret_list;
 
             if(undecided == this->my_type || primitive == this->my_type){
                 if(this->my_type != other.my_type){
                     throw std::runtime_error("Could not use as prototype (mismatched types) ");
                 }
-                ret_list = DictList(other);
+                ret_list = DictList_BASE<T>(other);
                 return ret_list;
             }
 
@@ -374,14 +379,14 @@ class DictList {
                 if(this->size() != other.size()) { throw std::runtime_error("Could not use as prototype (mismatched length) "); }
                 for(int i = 0;i<this->map_key_storage.size();i++){
                     std::string the_key = this->map_key_storage.at(i);
-                    DictList blah = this->at(the_key).use_as_prototype(other.at(the_key));
+                    DictList_BASE<T> blah = this->at(the_key).use_as_prototype(other.at(the_key));
                     ret_list.set(the_key, blah);
                 }
 
                 return ret_list;
             }
 
-            throw std::logic_error("Should not make it to the bottom of DictList::use_as_prototype.");
+            throw std::logic_error("Should not make it to the bottom of DictList_BASE::use_as_prototype.");
             return ret_list;
         }
 
@@ -391,42 +396,42 @@ class iterator : public std::forward_iterator_tag {
         The things it iterates over each provide iterators, so maybe the natural thing is to have a stack of iterators?
         It might not be storage efficient, but it's programmer time efficient.
 
-        Duh. No, we don't need an explicit stack. The iterator knows which DictList it iterates, and has a handle to a current sub-iterator.
+        Duh. No, we don't need an explicit stack. The iterator knows which DictList_BASE it iterates, and has a handle to a current sub-iterator.
         The handles to handles to handles of sub-iterators _are_ the stack.
 
         Blah. That's just reasoning to avoid learning more STL, it will create a lot of memory derefrences.
         Yes, this library won't be used in really slow parts of the code, but still...
         */
-        DictList* my_dictlist;
-        std::stack< std::pair<DictList*, int> > my_stack;
-        //std::vector<std::vector<DictList>::iterator> position_stack;
+        DictList_BASE<T>* my_dictlist;
+        std::stack< std::pair<DictList_BASE<T>*, int> > my_stack;
+        //std::vector<std::vector<DictList_BASE<T>>::iterator> position_stack;
 
     public:
-        inline iterator(DictList *initial_dictlist, int position) : my_dictlist(initial_dictlist), my_stack(){
+        inline iterator(DictList_BASE<T> *initial_dictlist, int position) : my_dictlist(initial_dictlist), my_stack(){
             my_stack.push(std::make_pair(initial_dictlist,position));
         }
 
     public:
 
-        inline iterator(const DictList::iterator &other) : my_dictlist(other.my_dictlist), my_stack(other.my_stack) {
+        inline iterator(const DictList_BASE<T>::iterator &other) : my_dictlist(other.my_dictlist), my_stack(other.my_stack) {
             //pass
         }
 
-        inline DictList::iterator& operator=(const DictList::iterator &other){
+        inline DictList_BASE<T>::iterator& operator=(const DictList_BASE<T>::iterator &other){
             my_dictlist = other.my_dictlist;
             my_stack = other.my_stack;
             return *this;
         }
 
-        inline bool operator==(const DictList::iterator &other) const{
+        inline bool operator==(const DictList_BASE<T>::iterator &other) const{
             return (my_dictlist == other.my_dictlist && my_stack == other.my_stack);
         }
 
-        inline bool operator!=(const DictList::iterator &other) const{
+        inline bool operator!=(const DictList_BASE<T>::iterator &other) const{
             return !(my_dictlist == other.my_dictlist && my_stack == other.my_stack);
         }
 
-        inline DictList::iterator& operator++(){
+        inline DictList_BASE<T>::iterator& operator++(){
             //TODO: The meat of the traversal algorithm
             if(my_stack.size() < 1){ //off the end.
                 //std::cerr << "off end." << std::endl;
@@ -463,7 +468,7 @@ class iterator : public std::forward_iterator_tag {
 
                 //We're looking at the next subobject of the thing on top of the stack.
                 //If it is another compound object, we need to descend into it( put it on top of the stack. )
-                DictList *current_pointed_element = &(my_stack.top().first->at(my_stack.top().second));
+                DictList_BASE<T> *current_pointed_element = &(my_stack.top().first->at(my_stack.top().second));
                 DictListType check_type = current_pointed_element->my_type;
 
                 //some compound type, gets pushed to the stack, equivalent to recursion
@@ -491,16 +496,16 @@ class iterator : public std::forward_iterator_tag {
             return *this;
         }
 
-        inline DictList::iterator operator++(int unused){
-            DictList::iterator tmp(*this);
+        inline DictList_BASE<T>::iterator operator++(int unused){
+            DictList_BASE<T>::iterator tmp(*this);
             this->operator++();
             return tmp;
         }
 
-        inline DictList& operator*(){
+        inline DictList_BASE<T>& operator*(){
 
             //Actually, the increment should handle this.
-            DictList& current_pointed_element = my_stack.top().first->at(my_stack.top().second);
+            DictList_BASE<T>& current_pointed_element = my_stack.top().first->at(my_stack.top().second);
 
             if(primitive == current_pointed_element.my_type){
                 return current_pointed_element;//TODO: need to check that this actually returns a reference, rather than creating a new one with copy construction.
@@ -526,11 +531,11 @@ class iterator : public std::forward_iterator_tag {
             //I'd be tempted to change the stack storage to a vector,
             //but looking inside the stack probably doesn't happen often.
 
-            std::stack< std::pair<DictList*, int> > tmp_stack(my_stack);
+            std::stack< std::pair<DictList_BASE<T>*, int> > tmp_stack(my_stack);
 
             while(tmp_stack.size() != 0){
 
-                DictList *top_container = tmp_stack.top().first;
+                DictList_BASE<T> *top_container = tmp_stack.top().first;
                 int top_index = tmp_stack.top().second;
                 tmp_stack.pop();
 
@@ -578,12 +583,12 @@ class iterator : public std::forward_iterator_tag {
     The overloaded subscript is next to the other subscript.
     */
 
-    inline operator dictlist_primitive_t() const {
+    inline operator T() const {
         if(primitive != this->my_type){ throw std::runtime_error("Cannot cast non-primitive.");}
         return this->v();
     }
 
-    friend std::ostream& operator<<(std::ostream& os, const DictList& obj);
+    friend std::ostream& operator<<<T>(std::ostream& os, const DictList_BASE<T>& obj);
 
     inline std::string str(){
         std::stringstream ss;
@@ -595,7 +600,8 @@ class iterator : public std::forward_iterator_tag {
 
 };//END OF DICTLIST
 
-    inline std::ostream& operator<<(std::ostream& os, const DictList& obj)
+template<typename T>
+    inline std::ostream& operator<<(std::ostream& os, const DictList_BASE<T>& obj)
     {
         // write obj to stream
         if(primitive == obj.my_type){
@@ -637,6 +643,10 @@ class iterator : public std::forward_iterator_tag {
         return os;
     }
 
-}
+
+typedef DictList_BASE<dictlist_default_primitive_t> DictList;
+
+} //END of Namespace
+
 
 #endif
