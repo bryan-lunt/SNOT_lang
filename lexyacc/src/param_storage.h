@@ -378,6 +378,9 @@ class DictList_BASE : public __detail::DictListStorage_MIXIN<dictlist_key_t, Dic
                 default:
                     break;
             }
+            //Should and must never reach here.
+            //TODO: Consider adding an assert, an exception may make it too much slower.
+            return -3;
         }
 
         /*
