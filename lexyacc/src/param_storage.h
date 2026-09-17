@@ -25,10 +25,21 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-
+#include <cstddef>
 #include <stdexcept>
 #include <vector>
-#include <map>
+
+/***
+We want to use the unordered map if it's available.
+*/
+#if __cplusplus >= 201103L
+    #include <unordered_map>
+    #define DICTLIST_BASIC_MAP_TEMPLATE std::unordered_map
+#else
+    #include <map>
+    #define DICTLIST_BASIC_MAP_TEMPLATE std::map
+#endif
+
 #include <string>
 #include <stack>
 #include <sstream>
@@ -37,9 +48,50 @@ SOFTWARE.
 
 namespace gsparams {
 
+namespace __detail {
+  //Private namespace
+  template<typename K, typename V>
+  class DictListStorage_MIXIN {
+    /*
+    You may think that I should have just implemented an isertion-ordered-map
+     and used that in the DictList, but this version may have some efficiency gains.
+    Because sometimes we switch between being a list and being a dictionary.
+    This lets us get the items at full speed of a vector instead of needing to do several dictionary lookups.
+    For our usecase this will be faster. We do the traversals often.
+    */
+    public:
+      typedef std::size_t size_type;
+      typedef DICTLIST_BASIC_MAP_TEMPLATE<K,size_type> map_storage_type;
+    protected:
+      map_storage_type map_storage; //Keys to locations in the list.
+      std::vector<K> map_key_storage; //Keys in insertion order.
+      std::vector<V> list_storage; //only primitive values lack list storage.
+    public:
+      inline void insert(const K& key, const V& value){
+        typename DICTLIST_BASIC_MAP_TEMPLATE<K,size_type>::iterator iter = map_storage.find(key);
+        if(iter == map_storage.end()){ //key alredy existed in map
+
+        }else{//inserting a new value into the map
+
+        }
+      }
+
+      inline void clear(){
+          this->list_storage.clear();
+          this->map_key_storage.clear();
+          this->map_storage.clear();
+      }
+
+      inline size_type size() const{
+        return this->list_storage.size();
+      }
+  };
+}
+
 #define dictlist_default_primitive_t double
 #define dictlist_primitive_t double
-#define dictlist_key_t std::string
+//#define dictlist_key_t std::string
+typedef std::string dictlist_key_t;
 
 typedef enum { undecided, primitive, dict, list} DictListType;
 
@@ -47,45 +99,59 @@ template<typename T> class DictList_BASE;
 template<typename T> inline std::ostream& operator<<(std::ostream& os, const DictList_BASE<T>& obj);
 
 template<typename T = dictlist_primitive_t>
-class DictList_BASE {
+class DictList_BASE : public __detail::DictListStorage_MIXIN<dictlist_key_t, DictList_BASE<T> >{
     public:
     //private:
     //public:
+
+        typedef __detail::DictListStorage_MIXIN<dictlist_key_t, DictList_BASE<T> > base_type;
+        typedef typename base_type::size_type size_type; //our own size type, syntactic sugar.
+        class iterator; //Nested iterator class, forward declared.
+        typedef typename base_type::map_storage_type dictlist_map_t;
+
+        //member variables.
         DictListType my_type;
         T my_value;
+        //dictlist_map_t map_storage;
+        //std::vector<dictlist_key_t> map_key_storage; //when we want to output, we need to be able to iterate over keys too.
+        //td::vector<DictList_BASE<T> > list_storage; //only primitive values lack list storage.
 
-        typedef std::map<std::string,int> dictlist_map_t;
-        dictlist_map_t map_storage;
-        std::vector<std::string> map_key_storage; //when we want to output, we need to be able to iterate over keys too.
-        std::vector<DictList_BASE<T> > list_storage; //only primitive values lack list storage.
+        inline void clear_helper(){
+            this->base_type::clear();
+            this->my_value = 0.0;
+            this->my_type = undecided;
+        }
+
+        inline void copy_helper(const DictList_BASE &other){
+
+            this->my_type = other.my_type;
+            this->my_value = other.my_value;
+
+            this->list_storage = other.list_storage;
+            this->map_key_storage = other.map_key_storage;
+            this->map_storage = dictlist_map_t(other.map_storage);
+
+        }
 
         inline void undecided_to_dict_else_error(){
-            if(this->my_type == dict){return;
-            }if(this->my_type == undecided){
-                list_storage.clear();
-                //list_storage = new std::vector<DictList_BASE<T>>(0);
-                map_storage.clear();
-                //map_storage = new dictlist_map_t();
-                map_key_storage.clear();
-                //map_key_storage = new std::vector<std::string>(0);
+            if(this->my_type == dict){return;} // already a dictionary.
+
+            if(this->my_type == undecided){
+                this->clear_helper();//should be unnecessary
                 this->my_type = dict;
             }else{
-                throw std::runtime_error("Already upgraded");
+                throw std::runtime_error("Already upgraded to a different container type");
             }
         }
 
         inline void undecided_to_list_else_error(){
-            if(this->my_type == list){return;
-            }if(this->my_type == undecided){
-                list_storage.clear();
-                //list_storage = new std::vector<DictList_BASE<T>>(0);
-                map_storage.clear();
-                //map_storage = NULL;
-                map_key_storage.clear();
-                //map_key_storage = NULL;
+            if(this->my_type == list){return;} //already a list
+
+            if(this->my_type == undecided){
+                this->clear_helper();//should be unnecessary
                 this->my_type = list;
             }else{
-                throw std::runtime_error("Already upgraded");
+                throw std::runtime_error("Already upgraded to a different container type");
             }
         }
 
@@ -101,14 +167,14 @@ class DictList_BASE {
                 return;
             }
 
-            int n = this->list_storage.size();
-            for(int i = 0; i < n; i++){
+            size_type n = this->list_storage.size();
+            for(size_type i = 0; i < n; i++){
                 this->list_storage.at(i).traverse_internal(target);
                 //shoudl be able to overwrite some operator with an iterator and
             }
         }
 
-        inline int populate_internal(const std::vector< T >& target,int starting_at) {
+        inline size_type populate_internal(const std::vector< T >& target,size_type starting_at) {
             //public function has already cleared and setup the beginnigs of the target vector.
             if(undecided == this->my_type){
                 return 0;
@@ -121,55 +187,34 @@ class DictList_BASE {
 
             //some type that stores things
 
-            int num_consumed = 0;
-            int n = this->list_storage.size();
-            for(int i = 0; i < n; i++){
+            size_type num_consumed = 0;
+            size_type n = this->list_storage.size();
+            for(size_type i = 0; i < n; i++){
                 num_consumed += this->list_storage.at(i).populate_internal(target,starting_at+num_consumed);
             }
             return num_consumed;
         }
 
-        inline void clear_helper(){
-            this->list_storage.clear();
-            this->map_key_storage.clear();
-            this->map_storage.clear();
-            this->my_value = 0.0;
-            this->my_type = undecided;
-        }
-
-        inline void copy_helper(const DictList_BASE &other){
-
-            this->my_type = other.my_type;
-            this->my_value = other.my_value;
-
-            this->list_storage = other.list_storage;
-            this->map_key_storage = other.map_key_storage;
-            this->map_storage = dictlist_map_t(other.map_storage);
-
-        }
     public:
-        inline DictList_BASE() : my_type(undecided), map_storage(), map_key_storage(), list_storage(), my_value(0.0) {
+        inline DictList_BASE() : base_type(), my_type(undecided), my_value(0.0) {
             my_type = undecided;
-            //map_storage = NULL;
-            //list_storage = NULL;
-            //map_key_storage = NULL;
             my_value = 0.0;//TODO: can we make this nan or some other defensive value?
         }
-        inline DictList_BASE(T in) : my_type(undecided), map_storage(), map_key_storage(), list_storage(), my_value(0.0)  {
+        inline DictList_BASE(T in) : base_type(), my_type(primitive), my_value(in)  {
             my_type = primitive;
-            //map_storage = NULL;
-            //list_storage = NULL;
-            //map_key_storage = NULL;
             my_value = in;
         }
         //copy constructor
 
-
-        inline DictList_BASE(const DictList_BASE &other) : my_type(undecided), map_storage(), map_key_storage(), list_storage(), my_value(0.0)  {
+        inline DictList_BASE(const DictList_BASE<T> &other) : base_type(), my_type(undecided), my_value(0.0)  {
             this->copy_helper(other);
         }
 
-        inline DictList_BASE& operator=(const DictList_BASE &other){
+
+        inline ~DictList_BASE(){
+        }
+
+        inline DictList_BASE& operator=(const DictList_BASE<T> &other){
             this->clear_helper();
 
             this->copy_helper(other);
@@ -187,16 +232,16 @@ class DictList_BASE {
             return *this;
         }
 
-        inline ~DictList_BASE(){
-        }
 
-        class iterator;
 
         inline T v() const {
             if(this->my_type != primitive){throw std::runtime_error("Asked value of non primitive");}
             return this->my_value;
         }
 
+        /*
+        * functions and operators for list-like behaviour.
+        */
         inline void push_back(const DictList_BASE<T>& in) {
             switch(this->my_type){
                 case primitive:
@@ -205,12 +250,13 @@ class DictList_BASE {
                 case undecided:
                     this->my_type = list;
                     //this->list_storage = new std::vector<DictList_BASE<T>>(0);
-                    this->list_storage.clear();
+                    this->base_type::clear();//list_storage should already be cleared...
+                    //deliberate fallhrough.
                 case list:
                     this->list_storage.push_back(in);
                     break;
                 case dict:
-                    throw std::runtime_error("Cannot append to a dict");
+                    throw std::runtime_error("Cannot append to a dict as though it were a list");//because no key.
                     break;
                 default:
                     throw std::runtime_error("somethind strange.");
@@ -221,11 +267,12 @@ class DictList_BASE {
             #ifdef GS_PARAM_STORAGE_DEBUG
             std::cerr << "append from value" << std::endl;
             #endif
+            //relies on the other version for sanity checking.
             DictList_BASE<T> indictlist(in);
             this->push_back(indictlist);
         }
 
-        inline DictList_BASE& at(const int location) {
+        inline DictList_BASE& at(const size_type location) {
             switch(this->my_type){
 
                 case list:
@@ -245,16 +292,22 @@ class DictList_BASE {
         }
 
 
-        inline DictList_BASE& operator[](const int location) {
+        inline DictList_BASE& operator[](const size_type location) {
             return this->at(location);
         }
+        /*
+        *END of list-like behaviours
+        */
 
 
+        /*
+        *functions and operators for map/dictionary -like behaviour
+        */
         inline void set(dictlist_key_t key, DictList_BASE& in){
             undecided_to_dict_else_error();
             if(this->my_type != dict){throw std::runtime_error("Not a dictionary.");}
             //What if the value already exists?
-            dictlist_map_t::iterator key_to_int = this->map_storage.find(key);
+            typename dictlist_map_t::iterator key_to_int = this->map_storage.find(key);
             if(this->map_storage.end() == key_to_int){
                 //key does not exist
                 this->list_storage.push_back(in);
@@ -275,7 +328,7 @@ class DictList_BASE {
             if(dict != this->my_type){
                 throw std::runtime_error("Can't us this as a dictionary.");
             }
-            dictlist_map_t::iterator key_to_int = this->map_storage.find(key);
+            typename dictlist_map_t::iterator key_to_int = this->map_storage.find(key);
             if(this->map_storage.end() == key_to_int){
                 throw std::out_of_range("Asked for a key that does not exist.");
             }
@@ -284,7 +337,7 @@ class DictList_BASE {
 
         inline DictList_BASE& operator[](dictlist_key_t key) {
             undecided_to_dict_else_error();
-            dictlist_map_t::iterator key_to_int = this->map_storage.find(key);
+            typename dictlist_map_t::iterator key_to_int = this->map_storage.find(key);
             if(this->map_storage.end() == key_to_int){
                 //
                 DictList_BASE<T> tmp;
@@ -300,11 +353,18 @@ class DictList_BASE {
             return this->list_storage.at(key_to_int->second);
         }
 
+        /*
+        //NOTE: I don't know if this is needed, it definitely breaks in new C++ but does it work in old C++?
         inline DictList_BASE<T>& operator[](const char* key){
             return this->operator[](dictlist_key_t(key));
         }
+        */
 
-        inline int size() const {
+        /*
+        *END functions and operators for map/dictionary -like behaviour
+        */
+
+        inline size_type size() const {
             switch(this->my_type){
                 case undecided:
                     return -2;
@@ -314,12 +374,17 @@ class DictList_BASE {
                     break;
                 case list:
                 case dict:
-                    return this->list_storage.size();
+                    return this->base_type::size();
                 default:
                     break;
             }
         }
 
+        /*
+        * Fill the vector target with the leaf values from this tree.
+        *
+        * Target must store the correct type. It's up to the user to ensure that.
+        */
         inline void traverse(std::vector< T >* target) const {
             if(undecided == this->my_type){
                 throw std::runtime_error("Can't traverse undecided");
@@ -330,9 +395,12 @@ class DictList_BASE {
             this->traverse_internal(target);
         }
 
+        /*
+        * Fill the leaves of this tree with values from the vector source.
+        */
         inline void populate(const std::vector< T >& source) {
-            int num_consumed = populate_internal(source,0);
-            //do I want to check that the number consumed is right?
+            size_type num_consumed = populate_internal(source,0);
+            //TODO: do I want to check that the number consumed is right?
         }
 
         inline bool populate_or_revert(const std::vector< T >& source) {
@@ -352,22 +420,34 @@ class DictList_BASE {
 
         /**
         *   Create a new DictList_BASE hierarchy using values from another, but ordering according to this.
+        *
+        *   The strong precondition is that they both have the same tree hierarchy, but not necessarily the same order.
+        *   Leaves must retain the type of the other. This object is only acting as the template.
         */
-        inline DictList_BASE use_as_prototype(DictList_BASE &other){
-            DictList_BASE<T> ret_list;
+        template<typename U>
+        inline DictList_BASE<U> use_as_prototype(DictList_BASE<U> &other){
+            DictList_BASE<U> ret_list;
+
+            //Check sanity & compatibility
+            //TODO: Prevent an uninitialized object from acting as a template?
+            if(this->my_type != other.my_type) { throw std::runtime_error("Could not use as prototype (mismatched types) "); }
+            if(this->size() != other.size()) { throw std::runtime_error("Could not use as prototype (mismatched length) "); }
+            /*
+            * NOTE: PERFORMANCE: It would be tempting to make this do all sanity checking and tree matching each time. In real use you can't afford that time penalty.
+            */
+
+
+            //passed compatibility checking
 
             if(undecided == this->my_type || primitive == this->my_type){
-                if(this->my_type != other.my_type){
-                    throw std::runtime_error("Could not use as prototype (mismatched types) ");
-                }
-                ret_list = DictList_BASE<T>(other);
+                ret_list = DictList_BASE<U>(other);
                 return ret_list;
             }
 
             if(list == this->my_type){
-                if(this->my_type != other.my_type) { throw std::runtime_error("Could not use as prototype (mismatched types) "); }
-                if(this->size() != other.size()) { throw std::runtime_error("Could not use as prototype (mismatched length) "); }
-                for(int i = 0;i<this->list_storage.size();i++){
+                //TODO: We can't actually enforce the order of a list if we don't know what the leaf values are
+                //TODO: If the list contains dictionaries and things, should we enforce matching?
+                for(size_type i = 0;i<this->list_storage.size();i++){
                     ret_list.push_back(this->at(i).use_as_prototype(other.at(i)));
                 }
 
@@ -375,11 +455,9 @@ class DictList_BASE {
             }
 
             if(dict == this->my_type){
-                if(this->my_type != other.my_type) { throw std::runtime_error("Could not use as prototype (mismatched types) "); }
-                if(this->size() != other.size()) { throw std::runtime_error("Could not use as prototype (mismatched length) "); }
-                for(int i = 0;i<this->map_key_storage.size();i++){
+                for(size_type i = 0;i<this->map_key_storage.size();i++){
                     std::string the_key = this->map_key_storage.at(i);
-                    DictList_BASE<T> blah = this->at(the_key).use_as_prototype(other.at(the_key));
+                    DictList_BASE<U> blah = this->at(the_key).use_as_prototype(other.at(the_key));
                     ret_list.set(the_key, blah);
                 }
 
@@ -390,7 +468,46 @@ class DictList_BASE {
             return ret_list;
         }
 
-class iterator : public std::forward_iterator_tag {
+    inline iterator begin(){
+        iterator ret_iter(this,-1);
+        ++ret_iter;
+        return ret_iter;
+    }
+
+    inline iterator end(){
+        iterator ret_iter(this,this->size());
+        ++ret_iter;
+        return ret_iter;
+    }
+
+    /*
+    Unfortunately, it looks like we can't have typecasting and have nice subscripting at the same time.
+
+    We can, by virtue of altering the subscript operator, which somehow makes that take presedence over this cast.
+    Thanks stack overflow! : https://stackoverflow.com/questions/15850840/ambiguous-overload-for-operator-if-conversion-operator-to-int-exist
+
+    The overloaded subscript is next to the other subscript.
+    */
+
+    inline operator T() const {
+        if(primitive != this->my_type){ throw std::runtime_error("Cannot cast non-primitive.");}
+        return this->v();
+    }
+
+    friend std::ostream& operator<< <T>(std::ostream& os, const DictList_BASE<T>& obj);
+
+    inline std::string str(){
+        std::stringstream ss;
+        ss.clear();
+        ss << *this;
+        std::string foobar(ss.str());
+        return foobar;
+    }
+
+};//END OF DICTLIST
+
+template<typename T>
+class DictList_BASE<T>::iterator : public std::forward_iterator_tag {
     protected:
         /*This iterator will need some kind of stack for state storage.
         The things it iterates over each provide iterators, so maybe the natural thing is to have a stack of iterators?
@@ -561,44 +678,6 @@ class iterator : public std::forward_iterator_tag {
         }
 
 };//End of declaration of iterator
-
-    inline iterator begin(){
-        iterator ret_iter(this,-1);
-        ++ret_iter;
-        return ret_iter;
-    }
-
-    inline iterator end(){
-        iterator ret_iter(this,this->size());
-        ++ret_iter;
-        return ret_iter;
-    }
-
-    /*
-    Unfortunately, it looks like we can't have typecasting and have nice subscripting at the same time.
-
-    We can, by virtue of altering the subscript operator, which somehow makes that take presedence over this cast.
-    Thanks stack overflow! : https://stackoverflow.com/questions/15850840/ambiguous-overload-for-operator-if-conversion-operator-to-int-exist
-
-    The overloaded subscript is next to the other subscript.
-    */
-
-    inline operator T() const {
-        if(primitive != this->my_type){ throw std::runtime_error("Cannot cast non-primitive.");}
-        return this->v();
-    }
-
-    friend std::ostream& operator<<<T>(std::ostream& os, const DictList_BASE<T>& obj);
-
-    inline std::string str(){
-        std::stringstream ss;
-        ss.clear();
-        ss << *this;
-        std::string foobar(ss.str());
-        return foobar;
-    }
-
-};//END OF DICTLIST
 
 template<typename T>
     inline std::ostream& operator<<(std::ostream& os, const DictList_BASE<T>& obj)
