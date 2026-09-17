@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 3.20)
 
 ########## CMAKE SETUP ###########
 #For building on much newer CMAKE
@@ -30,9 +30,11 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
 #A target to just use the param_storage.h header
 add_library(snot_param_storage INTERFACE)
+add_library(SNOT::storage ALIAS snot_param_storage)
 target_sources(snot_param_storage INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/param_storage.h)
 target_include_directories(snot_param_storage INTERFACE ${CMAKE_CURRENT_SOURCE_DIR})
 
+#The parser
 add_library(snot.tab OBJECT snot.tab.cpp snot.tab.hpp snot.yy.hpp param_storage.h)
 add_library(snot.lex OBJECT snot.lex.cpp snot.yy.hpp param_storage.h)
 

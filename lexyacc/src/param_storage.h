@@ -313,6 +313,9 @@ class DictList {
                 default:
                     break;
             }
+            //Should and must never reach here.
+            //TODO: Consider adding an assert, an exception may make it too much slower.
+            return -3;
         }
 
         inline void traverse(std::vector< dictlist_primitive_t >* target) const {

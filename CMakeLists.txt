@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.20)
 
-project(SNOT_CPP
+project(SNOT
         VERSION 0.2.0
         LANGUAGES CXX
 )
@@ -13,10 +13,4 @@ if(NOT DEFINED PROJECT_IS_TOP_LEVEL)
     endif()
 endif()
 
-
-
-add_subdirectory("src")
-
-add_subdirectory("tests")
-
-add_subdirectory("examples")
+add_subdirectory("lexyacc")
