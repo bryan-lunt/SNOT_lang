@@ -30,7 +30,7 @@ SOFTWARE.
 #include <vector>
 
 /***
-WARNING TO NEXT POOR SAP (probalby me):
+WARNING TO NEXT POOR SAP (probably me):
 
 I thought that we wanted to use the `unordered_map` if it's available.
 
@@ -102,9 +102,9 @@ namespace __detail {
 
       inline void clear(){
           //don't user .clear()
-          this->list_storage = list_storage_type();
-          this->map_key_storage = map_key_storage_type();
-          this->map_storage = map_storage_type();
+          this->list_storage.clear();
+          this->map_key_storage.clear();
+          this->map_storage.clear();
       }
 
       inline size_type size() const{
@@ -155,6 +155,7 @@ class DictList_BASE : public __detail::DictListStorage_MIXIN<dictlist_key_t, Dic
             this->my_type = other.my_type;
             this->my_value = other.my_value;
 
+            //TODO: copy constructor/operator for the base class.
             this->list_storage = typename base_type::list_storage_type(other.list_storage);
             this->map_key_storage = typename base_type::map_key_storage_type(other.map_key_storage);
             this->map_storage = typename base_type::map_storage_type(other.map_storage);
@@ -164,7 +165,7 @@ class DictList_BASE : public __detail::DictListStorage_MIXIN<dictlist_key_t, Dic
         inline void undecided_to_dict_else_error(){
             if(this->my_type == gsparams::dict){return;} // already a dictionary.
 
-            if(this->my_type == undecided){
+            if(this->my_type == gsparams::undecided){
                 this->clear_helper();//should be unnecessary
                 this->my_type = gsparams::dict;
             }else{
@@ -191,11 +192,11 @@ class DictList_BASE : public __detail::DictListStorage_MIXIN<dictlist_key_t, Dic
     //protected:
         inline void traverse_internal(std::vector< T >* target) const {
             //public function has already cleared and setup the beginnigs of the target vector.
-            if(undecided == this->my_type){
+            if(gsparams::undecided == this->my_type){
                 return;
             }
 
-            if(primitive == this->my_type){
+            if(gsparams::primitive == this->my_type){
                 target->push_back(this->v());
                 return;
             }
@@ -209,11 +210,11 @@ class DictList_BASE : public __detail::DictListStorage_MIXIN<dictlist_key_t, Dic
 
         inline size_type populate_internal(const std::vector< T >& target,const size_type starting_at) {
             //public function has already cleared and setup the beginnigs of the target vector.
-            if(undecided == this->my_type){
+            if(gsparams::undecided == this->my_type){
                 return 0;
             }
 
-            if(primitive == this->my_type){
+            if(gsparams::primitive == this->my_type){
                 this->my_value = target[starting_at];
                 return 1;
             }
@@ -270,16 +271,22 @@ class DictList_BASE : public __detail::DictListStorage_MIXIN<dictlist_key_t, Dic
             //Don't need this because we already know that the thing is empty.
             //this->clear_helper();//You could assign something to equal a value stored in itself and if so, it could cause problems?
 
-            this->my_type = primitive;
+            this->my_type = gsparams::primitive;
             this->my_value = value;
 
             return *this;
         }
 
+        /*
+        //TODO: Implement a casting operator.
+        explicit operator DictList_BASE<U>() const {
+          //Creating a new object hierarchy to match this one, but of a different type.
 
+        }
+        */
 
         inline T v() const {
-            if(this->my_type != primitive){throw std::runtime_error("Asked value of non primitive");}
+            if(this->my_type != gsparams::primitive){throw std::runtime_error("Asked value of non primitive");}
             return this->my_value;
         }
 
@@ -422,6 +429,7 @@ class DictList_BASE : public __detail::DictListStorage_MIXIN<dictlist_key_t, Dic
         *END functions and operators for map/dictionary -like behaviour
         */
 
+        //Deliberately using a signed in type
         inline int size() const {
             //std::cerr << "Asked the size of " << (this) << " which is of type " << this->my_type << " ." << std::endl << std::flush;
 
@@ -434,6 +442,7 @@ class DictList_BASE : public __detail::DictListStorage_MIXIN<dictlist_key_t, Dic
                     break;
                 case gsparams::list:
                 case gsparams::dict:
+                    //TODO: check that the base size is not going to wrap around for an int. Not a realistic problem.
                     return (int)this->base_type::size();
                 default:
                     break;
