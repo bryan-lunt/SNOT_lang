@@ -16,7 +16,7 @@ RUN apt-get update -y -q && \
     rm -rf /var/lib/apt/lists/*
 
     RUN apt-get update -y -q && \
-        apt-get install -y gdb && \
+        apt-get install -y gdb valgrind && \
         rm -rf /var/lib/apt/lists/*
 
 WORKDIR /workspace

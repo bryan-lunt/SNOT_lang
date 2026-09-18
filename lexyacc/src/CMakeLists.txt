@@ -34,10 +34,38 @@ add_library(SNOT::storage ALIAS snot_param_storage)
 target_sources(snot_param_storage INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/param_storage.h)
 target_include_directories(snot_param_storage INTERFACE ${CMAKE_CURRENT_SOURCE_DIR})
 
-#The parser
-add_library(snot.tab OBJECT snot.tab.cpp snot.tab.hpp snot.yy.hpp param_storage.h)
-add_library(snot.lex OBJECT snot.lex.cpp snot.yy.hpp param_storage.h)
+################ PARSER RELATED ######################
+find_package(FLEX REQUIRED)
+find_package(BISON REQUIRED)
 
-add_library(snot STATIC snot.h $<TARGET_OBJECTS:snot.tab> $<TARGET_OBJECTS:snot.lex>)
-target_link_libraries(snot snot_param_storage)
-target_include_directories(snot INTERFACE ${CMAKE_CURRENT_SOURCE_DIR})
+BISON_TARGET(snot_parser snot.ypp ${CMAKE_CURRENT_BINARY_DIR}/snot.tab.cpp
+                      DEFINES_FILE ${CMAKE_CURRENT_BINARY_DIR}/snot.tab.hpp)
+
+FLEX_TARGET(snot_lexer snot.lpp ${CMAKE_CURRENT_BINARY_DIR}/snot.yy.cpp)
+
+
+ADD_FLEX_BISON_DEPENDENCY(snot_lexer snot_parser)
+
+set_source_files_properties(${BISON_snot_parser_OUTPUTS}
+    PROPERTIES OBJECT_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/param_storage.h"
+)
+
+set_source_files_properties(${FLEX_snot_lexer_OUTPUTS}
+    PROPERTIES OBJECT_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/param_storage.h"
+)
+
+add_library(snot STATIC snot.h ${BISON_snot_parser_OUTPUTS} ${FLEX_snot_lexer_OUTPUTS})
+set_target_properties(snot PROPERTIES LINKER_LANGUAGE CXX)
+target_link_libraries(snot PUBLIC snot_param_storage)
+target_include_directories(snot INTERFACE
+    ${CMAKE_CURRENT_BINARY_DIR}      # for the generated snot.yy.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}      # for param_storage.h
+)
+
+#The parser
+#add_library(snot.tab OBJECT snot.tab.cpp snot.tab.hpp snot.yy.hpp param_storage.h)
+#add_library(snot.lex OBJECT snot.lex.cpp snot.yy.hpp param_storage.h)
+
+#add_library(snot STATIC snot.h $<TARGET_OBJECTS:snot.tab> $<TARGET_OBJECTS:snot.lex>)
+#target_link_libraries(snot snot_param_storage)
+#target_include_directories(snot INTERFACE ${CMAKE_CURRENT_SOURCE_DIR})
