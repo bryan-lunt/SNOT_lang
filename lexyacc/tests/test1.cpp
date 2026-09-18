@@ -32,26 +32,24 @@ int main(){
     DictList two_element_array_dl = parse_dictlist(two_element_array_str);
     std::cout << "Test 3: Passed " << two_element_array_dl << std::endl;
 
-    return 0;
 
-    string testin="{\"tfs\":{\"A\":[1.1,1.2,1.3],\"B\":[2.1,2.2,2.3],\"C\":[2.1,2.2,2.3,2.1,2.2,2.3]}}";
+
+    string testin="{\"tfs\":{\"A\":[1.1,1.2,1.3],\"B\":[2.1,2.2,2.3],\"C\":[3.1,3.2,3.3,3.4,3.5,3.6]}}";
 
     DictList my_dictlist = parse_dictlist(testin);
 
 
+        std::cout << "About to traverse the parsed object" << std::endl;
         std::vector<double> thevals(0);
 
-
-        for(int j = 0;j<5;j++){
         my_dictlist.traverse(&thevals);
         for(int i = 0;i<thevals.size();i++){
             cout << thevals[i] << " ";
         }
-        cout << endl;
-        }
         thevals.clear();
+        std::cout << std::endl;
 
 
-        cout << my_dictlist.str() << endl;
+        std::cout << "Oiginally parsed string is:" << std::endl << "```" << std::endl << my_dictlist.str() << std::endl << "```" <<std::endl;
     return 0;
 }
