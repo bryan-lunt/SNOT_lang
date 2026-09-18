@@ -54,7 +54,7 @@ int yyerror(const char *p) { cerr << "Parse error!" << endl; return 0;}
 
 %require "2.3"
 
-%debug
+//%debug
 
 %start START
 
@@ -82,16 +82,16 @@ int yyerror(const char *p) { cerr << "Parse error!" << endl; return 0;}
 %left COLON
 %%
 START: ARRAY {
-    snot_parse_result = new DictList(*$1);
-    //$$ = $1;
+    snot_parse_result = $1;
+    $$ = $1;
 
     assert(gsparams::list == $1->my_type );
     assert(gsparams::list == $$->my_type );
     assert(gsparams::list == snot_parse_result->my_type );
   }
 | OBJECT {
-    snot_parse_result = new DictList(*$1);
-    //$$ = $1;
+    snot_parse_result = $1;
+    $$ = $1;
   }
 ;
 OBJECT: O_BEGIN O_END {
@@ -139,8 +139,11 @@ ARRAY: A_BEGIN A_END {
       assert(gsparams::undecided == retptr->my_type);
       assert(-2 == retptr->size());
     retptr->undecided_to_list_else_error();
-      std::cerr << "Type of newly initialized empty DictList is " << retptr->my_type << std::endl;
-      std::cerr << "Size of newly initialized empty DictList is " << retptr->size() << std::endl;
+      //std::cerr << "Type of newly initialized empty DictList is " << retptr->my_type << std::endl<< std::flush;
+      assert(gsparams::list == retptr->my_type);
+      //int temp_size = retptr->size(); assert(gsparams::list == retptr->my_type); //did the type change just by asking the size?
+
+      //std::cerr << "Size of newly initialized empty DictList is " << retptr->size() << std::endl;
       assert(0 == retptr->size());
 
     assert(gsparams::list == retptr->my_type);
@@ -160,11 +163,11 @@ ARRAY: A_BEGIN A_END {
       retptr->push_back(*itr);
     }
 
-    //delete $2; //causes memory problem!?!? even without double free????
+    delete $2;
     //delete elements_list; //double free, don't do.
     elements_list = NULL;
 
-    assert(gsparams::list == retptr->my_type);
+      assert(gsparams::list == retptr->my_type);
     $$ = retptr;
 }
 ;
@@ -174,7 +177,7 @@ ELEMENTS: VALUE {
     assert(0 == retval->size());
     retval->push_back(*$1);
 
-    std::cerr << "The retval array is inexplicably of size " << retval->size() << std::endl;
+    //std::cerr << "The retval array is inexplicably of size " << retval->size() << std::endl;
     assert(1 == retval->size());
 
     delete $1;

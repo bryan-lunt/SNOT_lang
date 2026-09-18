@@ -2,25 +2,23 @@
 #include <cassert>
 
 
-#include "param_storage.h"
+//#include "param_storage.h"
 #include "snot.h"
 
 using namespace std;
 using namespace gsparams;
 
-extern int yydebug;
+//extern int yydebug;
 
 int main(){
-    yydebug = 0;
+//    yydebug = 0;
 
 
-    std::cout << "Test 1: empty array" << std::endl;
+    std::cout << "Test 1: empty array" << std::endl << std::flush;
     string empty_array_str=R"([])";
     DictList empty_array_dl = parse_dictlist(empty_array_str);
-    //empty_array_dl.my_type = DictListType::list; //It's coming out of the parser as an empty list, but it calls itself an unknown type.
     assert(empty_array_dl.my_type == gsparams::list);
-    std::cout << "Test 1: Passed? " << empty_array_dl << std::endl;
-
+    std::cout << "Test 1: Passed? " << empty_array_dl << std::endl<< std::flush;
 
     std::cout << "Test 2: one element array" << std::endl;
     string one_element_array_str=R"([ 1.0 ])";

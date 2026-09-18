@@ -30,15 +30,27 @@ SOFTWARE.
 #include <vector>
 
 /***
-We want to use the unordered map if it's available.
+We want to use the unordered_map if it's available.
+
+We DO NOT want to use the unordered_map it inexplicably causes the parser to show
+absolutely weird behaviour that makes no sense. I lost an entire day on this.
+Sanity checkers don't find the problem!
+Debuggers show only that somehow a recently promoted DictList(acting as a list)
+reverts to being an `undefined`, and that reversion only happens when you call
+the `DictList::size()` function,
+and ONLY in the context of being inside a flex/bison parser.
+
+The same code has no problem in isolation.
+
+YOU HAVE BEEN WARNED!
 */
-#if __cplusplus >= 201103L
-    #include <unordered_map>
-    #define DICTLIST_BASIC_MAP_TEMPLATE std::unordered_map
-#else
+//#if __cplusplus >= 201103L
+//    #include <unordered_map>
+//    #define DICTLIST_BASIC_MAP_TEMPLATE std::unordered_map
+//#else
     #include <map>
     #define DICTLIST_BASIC_MAP_TEMPLATE std::map
-#endif
+//#endif
 
 #include <string>
 #include <stack>
@@ -60,6 +72,9 @@ namespace __detail {
     Because sometimes we switch between being a list and being a dictionary.
     This lets us get the items at full speed of a vector instead of needing to do several dictionary lookups.
     For our usecase this will be faster. We do the traversals often.
+
+    Usually we will want the items in order and all at once, more often that we're going to do dictionary lookup.
+    NOTE: Is that true?
     */
     public:
       typedef std::size_t size_type;
@@ -71,6 +86,7 @@ namespace __detail {
       map_key_storage_type map_key_storage; //Keys in insertion order.
       list_storage_type list_storage; //only primitive values lack list storage.
     public:
+      //TODO: Move all the lookup and storage code to here so that we have the option to play with it.
       /*
       inline void insert(const K& key, const V& value){
         typename DICTLIST_BASIC_MAP_TEMPLATE<K,size_type>::iterator iter = map_storage.find(key);
@@ -157,7 +173,7 @@ class DictList_BASE : public __detail::DictListStorage_MIXIN<dictlist_key_t, Dic
         }
 
         inline void undecided_to_list_else_error(){
-            std::cerr << "Promoting an undecided DictList to a list." << std::endl;
+            //std::cerr << "Promoting an undecided DictList to a list." << std::endl;
             if(this->my_type == gsparams::list){return;} //already a list
 
             if(this->my_type == gsparams::undecided){
@@ -274,7 +290,7 @@ class DictList_BASE : public __detail::DictListStorage_MIXIN<dictlist_key_t, Dic
             assert(0 <= this->size());
 
 
-            DictList_BASE tmp_element(in);//should use copy assignment?
+
             //TODO: scan ourselves to see that we don't already contain this value? Or make a copy?
 
             switch(this->my_type){
@@ -288,7 +304,9 @@ class DictList_BASE : public __detail::DictListStorage_MIXIN<dictlist_key_t, Dic
                     throw std::runtime_error("Cannot append to a dict as though it were a list");//because no key.
                     break;
                 case gsparams::list:
-                    this->list_storage.push_back(tmp_element);
+                    //DictList_BASE tmp_element(in);//should use copy assignment?
+                    //this->list_storage.push_back(tmp_element);
+                    this->list_storage.push_back(in);
                     break;
                 default:
                     throw std::runtime_error("somethind strange.");
@@ -403,7 +421,8 @@ class DictList_BASE : public __detail::DictListStorage_MIXIN<dictlist_key_t, Dic
         */
 
         inline int size() const {
-          
+            //std::cerr << "Asked the size of " << (this) << " which is of type " << this->my_type << " ." << std::endl << std::flush;
+
             switch(this->my_type){
                 case gsparams::undecided:
                     return -2;

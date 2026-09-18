@@ -554,7 +554,7 @@ static const yytype_int8 yytranslate[] =
 static const yytype_uint8 yyrline[] =
 {
        0,    84,    84,    92,    97,   102,   114,   122,   129,   137,
-     149,   171,   183,   193,   194,   195
+     152,   174,   186,   196,   197,   198
 };
 #endif
 
@@ -1126,8 +1126,8 @@ yyreduce:
   case 2: /* START: ARRAY  */
 #line 84 "snot.ypp"
              {
-    snot_parse_result = new DictList(*(yyvsp[0].onevalue));
-    //$$ = $1;
+    snot_parse_result = (yyvsp[0].onevalue);
+    (yyval.onevalue) = (yyvsp[0].onevalue);
 
     assert(gsparams::list == (yyvsp[0].onevalue)->my_type );
     assert(gsparams::list == (yyval.onevalue)->my_type );
@@ -1139,8 +1139,8 @@ yyreduce:
   case 3: /* START: OBJECT  */
 #line 92 "snot.ypp"
          {
-    snot_parse_result = new DictList(*(yyvsp[0].onevalue));
-    //$$ = $1;
+    snot_parse_result = (yyvsp[0].onevalue);
+    (yyval.onevalue) = (yyvsp[0].onevalue);
   }
 #line 1146 "snot.tab.cpp"
     break;
@@ -1214,18 +1214,21 @@ yyreduce:
       assert(gsparams::undecided == retptr->my_type);
       assert(-2 == retptr->size());
     retptr->undecided_to_list_else_error();
-      std::cerr << "Type of newly initialized empty DictList is " << retptr->my_type << std::endl;
-      std::cerr << "Size of newly initialized empty DictList is " << retptr->size() << std::endl;
+      //std::cerr << "Type of newly initialized empty DictList is " << retptr->my_type << std::endl<< std::flush;
+      assert(gsparams::list == retptr->my_type);
+      //int temp_size = retptr->size(); assert(gsparams::list == retptr->my_type); //did the type change just by asking the size?
+
+      //std::cerr << "Size of newly initialized empty DictList is " << retptr->size() << std::endl;
       assert(0 == retptr->size());
 
     assert(gsparams::list == retptr->my_type);
     (yyval.onevalue) = retptr;
   }
-#line 1225 "snot.tab.cpp"
+#line 1228 "snot.tab.cpp"
     break;
 
   case 10: /* ARRAY: A_BEGIN ELEMENTS A_END  */
-#line 149 "snot.ypp"
+#line 152 "snot.ypp"
                          {
     DictList *retptr = new DictList();
       assert(gsparams::undecided == retptr->my_type);
@@ -1240,35 +1243,35 @@ yyreduce:
       retptr->push_back(*itr);
     }
 
-    //delete $2; //causes memory problem!?!? even without double free????
+    delete (yyvsp[-1].valuelist);
     //delete elements_list; //double free, don't do.
     elements_list = NULL;
 
-    assert(gsparams::list == retptr->my_type);
+      assert(gsparams::list == retptr->my_type);
     (yyval.onevalue) = retptr;
 }
-#line 1251 "snot.tab.cpp"
+#line 1254 "snot.tab.cpp"
     break;
 
   case 11: /* ELEMENTS: VALUE  */
-#line 171 "snot.ypp"
+#line 174 "snot.ypp"
                 {
 
     std::vector<DictList> *retval = new std::vector<DictList>(0);
     assert(0 == retval->size());
     retval->push_back(*(yyvsp[0].onevalue));
 
-    std::cerr << "The retval array is inexplicably of size " << retval->size() << std::endl;
+    //std::cerr << "The retval array is inexplicably of size " << retval->size() << std::endl;
     assert(1 == retval->size());
 
     delete (yyvsp[0].onevalue);
     (yyval.valuelist) = retval;
   }
-#line 1268 "snot.tab.cpp"
+#line 1271 "snot.tab.cpp"
     break;
 
   case 12: /* ELEMENTS: VALUE COMMA ELEMENTS  */
-#line 183 "snot.ypp"
+#line 186 "snot.ypp"
                        {
 
     std::vector<DictList> *retptr = (yyvsp[0].valuelist);
@@ -1278,29 +1281,29 @@ yyreduce:
     delete (yyvsp[-2].onevalue);
     (yyval.valuelist) = retptr;
   }
-#line 1282 "snot.tab.cpp"
+#line 1285 "snot.tab.cpp"
     break;
 
   case 13: /* VALUE: NUMBER  */
-#line 193 "snot.ypp"
+#line 196 "snot.ypp"
               {(yyval.onevalue)=new DictList((yyvsp[0].val));}
-#line 1288 "snot.tab.cpp"
+#line 1291 "snot.tab.cpp"
     break;
 
   case 14: /* VALUE: OBJECT  */
-#line 194 "snot.ypp"
+#line 197 "snot.ypp"
          {(yyval.onevalue)=(yyvsp[0].onevalue);}
-#line 1294 "snot.tab.cpp"
+#line 1297 "snot.tab.cpp"
     break;
 
   case 15: /* VALUE: ARRAY  */
-#line 195 "snot.ypp"
+#line 198 "snot.ypp"
         {(yyval.onevalue)=(yyvsp[0].onevalue);}
-#line 1300 "snot.tab.cpp"
+#line 1303 "snot.tab.cpp"
     break;
 
 
-#line 1304 "snot.tab.cpp"
+#line 1307 "snot.tab.cpp"
 
       default: break;
     }
@@ -1493,7 +1496,7 @@ yyreturnlab:
   return yyresult;
 }
 
-#line 197 "snot.ypp"
+#line 200 "snot.ypp"
 
 //-- FUNCTION DEFINITIONS ---------------------------------
 #include <iostream>

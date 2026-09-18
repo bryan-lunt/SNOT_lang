@@ -19,6 +19,12 @@ set(CMAKE_MODULE_PATH
 # set the project name
 project(SNOT_lang VERSION 0.1.0 LANGUAGES CXX)
 
+option(ENABLE_SANITIZERS "Build with AddressSanitizer and UndefinedBehaviorSanitizer" ON)
+if(ENABLE_SANITIZERS)
+    add_compile_options(-fsanitize=address,undefined -fno-omit-frame-pointer -fPIC -g -O0)
+    add_link_options(-fsanitize=address,undefined)
+endif()
+
 # specify the C++ standard
 set(CMAKE_CXX_STANDARD 98)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
