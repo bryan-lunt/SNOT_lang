@@ -30,9 +30,11 @@ SOFTWARE.
 #include <vector>
 
 /***
-We want to use the unordered_map if it's available.
+WARNING TO NEXT POOR SAP (probalby me):
 
-We DO NOT want to use the unordered_map it inexplicably causes the parser to show
+I thought that we wanted to use the `unordered_map` if it's available.
+
+We DO NOT want to use the `unordered_map` it inexplicably causes the parser to show
 absolutely weird behaviour that makes no sense. I lost an entire day on this.
 Sanity checkers don't find the problem!
 Debuggers show only that somehow a recently promoted DictList(acting as a list)
@@ -78,7 +80,7 @@ namespace __detail {
     */
     public:
       typedef std::size_t size_type;
-      typedef DICTLIST_BASIC_MAP_TEMPLATE<K,size_type> map_storage_type;
+      typedef DICTLIST_BASIC_MAP_TEMPLATE<K,size_type> map_storage_type; //DO NOT change to `std::unordered_map` , see warning above.
       typedef std::vector<K> map_key_storage_type;
       typedef std::vector<V> list_storage_type;
     protected:
@@ -150,8 +152,8 @@ class DictList_BASE : public __detail::DictListStorage_MIXIN<dictlist_key_t, Dic
             return;//no need to copy.
           }
 
-            //this->my_type = other.my_type;
-            //this->my_value = other.my_value;
+            this->my_type = other.my_type;
+            this->my_value = other.my_value;
 
             this->list_storage = typename base_type::list_storage_type(other.list_storage);
             this->map_key_storage = typename base_type::map_key_storage_type(other.map_key_storage);
