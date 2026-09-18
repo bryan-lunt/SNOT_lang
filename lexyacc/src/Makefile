@@ -1,4 +1,6 @@
 
+.PHONY: clean all generate test
+
 all: lib
 
 lib: ./lib/libsnot.a
@@ -23,3 +25,5 @@ test: test.cpp snot.h param_storage.h ./lib/libsnot.a
 
 clean:
 	rm snot snot.tab.* snot.lex.*
+
+generate: snot.tab.cpp snot.tab.hpp snot.lex.cpp snot.yy.hpp

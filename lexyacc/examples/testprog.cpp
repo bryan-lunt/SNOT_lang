@@ -183,4 +183,7 @@ int main(){
 	       std::cout << myiter.get_path() << std::endl;
     }
 
+    std::cout << "OUTPUT SNOT/JSON? " << std::endl;
+    std::cout << top_dict << std::endl;
+
 }

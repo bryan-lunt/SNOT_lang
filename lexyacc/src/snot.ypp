@@ -36,7 +36,10 @@ THE SOFTWARE.
 #include <utility>
 #include <cstdlib>
 
+#include <cassert>
+
 #include "param_storage.h"
+
 #include "snot.yy.hpp"
 
 //-- I need this for atoi
@@ -44,7 +47,7 @@ using namespace std;
 using namespace gsparams;
 
 //-- Lexer prototype required by bison, aka getNextToken()
-DictList *last_object;
+DictList* snot_parse_result = NULL;
 int yylex();
 int yyerror(const char *p) { cerr << "Parse error!" << endl; return 0;}
 %}
@@ -61,13 +64,15 @@ int yyerror(const char *p) { cerr << "Parse error!" << endl; return 0;}
   double val;
   std::string *sym;
   gsparams::DictList *onevalue;
+  std::vector< gsparams::DictList> *valuelist;
   std::pair< std::string , gsparams::DictList> *onepair;
   std::vector< std::pair< std::string , gsparams::DictList> > *pairlist;
 };
 
 %token <val> NUMBER
 %token <sym> STRING
-%type <onevalue> OBJECT ELEMENTS ARRAY
+%type <onevalue> START OBJECT ARRAY
+%type <valuelist> ELEMENTS
 %type <onepair> PAIR
 %type <onevalue> VALUE
 %type <pairlist> MEMBERS
@@ -77,19 +82,27 @@ int yyerror(const char *p) { cerr << "Parse error!" << endl; return 0;}
 %left COLON
 %%
 START: ARRAY {
+    snot_parse_result = new DictList(*$1);
+    //$$ = $1;
+
+    assert(gsparams::list == $1->my_type );
+    assert(gsparams::list == $$->my_type );
+    assert(gsparams::list == snot_parse_result->my_type );
   }
 | OBJECT {
-    last_object = $1;
-    //delete $1;
+    snot_parse_result = new DictList(*$1);
+    //$$ = $1;
   }
 ;
 OBJECT: O_BEGIN O_END {
     	DictList *retval = new DictList();
-	retval->undecided_to_dict_else_error();
-	$$ = retval;
+	    retval->undecided_to_dict_else_error();
+	    $$ = retval;
   }
 | O_BEGIN MEMBERS O_END {
     DictList *retval = new DictList();
+    retval->undecided_to_dict_else_error();
+
     std::vector< std::pair< std::string , gsparams::DictList> >::iterator itr;
     for(itr = $2->begin();itr!= $2->end();++itr){
         retval->set(itr->first,itr->second);
@@ -99,17 +112,17 @@ OBJECT: O_BEGIN O_END {
   }
 ;
 MEMBERS: PAIR {
-    std::vector< std::pair< std::string , gsparams::DictList> > *retptr = new std::vector< std::pair< std::string , gsparams::DictList> >();
+    std::vector< std::pair< std::string , gsparams::DictList> > *retptr = new std::vector< std::pair< std::string , gsparams::DictList> >(0);
+    assert(0 == retptr->size());
+
     retptr->push_back(*$1);
     delete $1;
     $$ = retptr;
   }
 | PAIR COMMA MEMBERS {
-    std::vector< std::pair< std::string , gsparams::DictList> > *retptr = new std::vector< std::pair< std::string , gsparams::DictList> >();
-    *retptr = *$3;
+    std::vector< std::pair< std::string , gsparams::DictList> >*retptr = $3;
     retptr->insert(retptr->begin(), *$1);
     delete $1;
-    delete $3;//Maybe could have just used that.
     $$ = retptr;
   }
 ;
@@ -122,34 +135,62 @@ PAIR: STRING COLON VALUE {
   }
 ;
 ARRAY: A_BEGIN A_END {
-    DictList *retval = new DictList();
-    retval->undecided_to_list_else_error();
-    $$ = retval;
+    DictList *retptr = new DictList();
+      assert(gsparams::undecided == retptr->my_type);
+      assert(-2 == retptr->size());
+    retptr->undecided_to_list_else_error();
+      std::cerr << "Type of newly initialized empty DictList is " << retptr->my_type << std::endl;
+      std::cerr << "Size of newly initialized empty DictList is " << retptr->size() << std::endl;
+      assert(0 == retptr->size());
+
+    assert(gsparams::list == retptr->my_type);
+    $$ = retptr;
   }
 | A_BEGIN ELEMENTS A_END {
-    $$ = $2;
+    DictList *retptr = new DictList();
+      assert(gsparams::undecided == retptr->my_type);
+      assert(-2 == retptr->size());
+    retptr->undecided_to_list_else_error();
+      //std::cerr << "Size of newly initialized DictList is " << retptr->size() << std::endl;
+      assert(0 == retptr->size());
+
+    std::vector<DictList> *elements_list = $2;
+    std::vector<DictList>::iterator itr;
+    for(itr=elements_list->begin();itr != elements_list->end();++itr){
+      retptr->push_back(*itr);
+    }
+
+    //delete $2; //causes memory problem!?!? even without double free????
+    //delete elements_list; //double free, don't do.
+    elements_list = NULL;
+
+    assert(gsparams::list == retptr->my_type);
+    $$ = retptr;
 }
 ;
 ELEMENTS: VALUE {
-    DictList *retval = new DictList();
-    retval->undecided_to_list_else_error();
+
+    std::vector<DictList> *retval = new std::vector<DictList>(0);
+    assert(0 == retval->size());
     retval->push_back(*$1);
+
+    std::cerr << "The retval array is inexplicably of size " << retval->size() << std::endl;
+    assert(1 == retval->size());
+
     delete $1;
     $$ = retval;
   }
 | VALUE COMMA ELEMENTS {
-    DictList *retval = new DictList();
-    retval->undecided_to_list_else_error();
-    retval->push_back(*$1);
-    for(int i = 0;i<$3->size();i++){
-        retval->push_back($3->at(i));
-    }
+
+    std::vector<DictList> *retptr = $3;
+    retptr->insert(retptr->begin(), *$1);
+
+
     delete $1;
-    delete $3;
-    $$ = retval;
+    $$ = retptr;
   }
 ;
-VALUE: NUMBER {$$=new DictList(yylval.val);}
+VALUE: NUMBER {$$=new DictList($1);}
 | OBJECT {$$=$1;}
 | ARRAY {$$=$1;}
 ;
@@ -158,18 +199,29 @@ VALUE: NUMBER {$$=new DictList(yylval.val);}
 #include <iostream>
 
 DictList parse_dictlist(std::string &in){
-    yy_scan_string(in.c_str());
-    int parse_val = yyparse();
-    if(parse_val == 0){
+    snot_parse_result = NULL;
 
-    }else{
-        if(NULL != last_object){
-            delete last_object;
+    YY_BUFFER_STATE buf = yy_scan_string(in.c_str());
+    yy_switch_to_buffer(buf);
+
+    int parse_val = yyparse();
+
+    yy_delete_buffer(buf);
+
+    if(parse_val != 0){
+      //FAILURE
+        if(NULL != snot_parse_result){
+            delete snot_parse_result;
         }
         throw std::runtime_error("Could not parse a DictList");
     }
 
-    DictList retval = *last_object;
-    delete last_object;
+
+    DictList retval;
+    retval = *snot_parse_result;
+
+    delete snot_parse_result;
+    snot_parse_result = NULL;
+
     return retval;
 }

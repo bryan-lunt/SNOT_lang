@@ -15,4 +15,8 @@ RUN apt-get update -y -q && \
     apt-get install -y flex bison && \
     rm -rf /var/lib/apt/lists/*
 
+    RUN apt-get update -y -q && \
+        apt-get install -y gdb && \
+        rm -rf /var/lib/apt/lists/*
+
 WORKDIR /workspace

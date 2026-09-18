@@ -2,7 +2,7 @@
 
 /*
 This file is adapted from the file json.l at : https://gist.github.com/justjkk/436828/
-The original license for the original file follows: 
+The original license for the original file follows:
 
 The MIT License (MIT)
 
@@ -37,7 +37,7 @@ THE SOFTWARE.
     #include "snot.tab.hpp"
 
 
-/*    
+/*
     #define STRING "str"
     #define NUMBER "number"
     #define O_BEGIN "o_begin"
@@ -45,7 +45,7 @@ THE SOFTWARE.
     #define A_BEGIN "a_begin"
     #define A_END "a_end"
     #define COMMA "comma"
-  */  
+  */
 
 %}
 
@@ -69,33 +69,36 @@ DBL_QUOTE ["]
 {DBL_QUOTE}{CHARS}{DBL_QUOTE} {
     yylval.sym=new std::string(yytext,1,strlen(yytext)-2);
     return STRING;
-};
+}
+
 {NUMBER} {
     yylval.val=atof(yytext);
     return NUMBER;
 }
+
 \{ {
     return O_BEGIN;
-};
+}
 
 \} {
     return O_END;
-};
+}
 
 \[ {
     return A_BEGIN;
-};
+}
 
 \] {
     return A_END;
-};
+}
 
 , {
     return COMMA;
-};
+}
+
 : {
     return COLON;
-};
+}
 
 [ \t\n]+ /* ignore whitespace */;
 

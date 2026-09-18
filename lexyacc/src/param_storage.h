@@ -44,6 +44,8 @@ We want to use the unordered map if it's available.
 #include <stack>
 #include <sstream>
 
+#include <cassert>
+
 #include <iostream>
 
 namespace gsparams {
@@ -62,11 +64,14 @@ namespace __detail {
     public:
       typedef std::size_t size_type;
       typedef DICTLIST_BASIC_MAP_TEMPLATE<K,size_type> map_storage_type;
+      typedef std::vector<K> map_key_storage_type;
+      typedef std::vector<V> list_storage_type;
     protected:
       map_storage_type map_storage; //Keys to locations in the list.
-      std::vector<K> map_key_storage; //Keys in insertion order.
-      std::vector<V> list_storage; //only primitive values lack list storage.
+      map_key_storage_type map_key_storage; //Keys in insertion order.
+      list_storage_type list_storage; //only primitive values lack list storage.
     public:
+      /*
       inline void insert(const K& key, const V& value){
         typename DICTLIST_BASIC_MAP_TEMPLATE<K,size_type>::iterator iter = map_storage.find(key);
         if(iter == map_storage.end()){ //key alredy existed in map
@@ -75,25 +80,27 @@ namespace __detail {
 
         }
       }
+      */
 
       inline void clear(){
-          this->list_storage.clear();
-          this->map_key_storage.clear();
-          this->map_storage.clear();
+          //don't user .clear()
+          this->list_storage = list_storage_type();
+          this->map_key_storage = map_key_storage_type();
+          this->map_storage = map_storage_type();
       }
 
       inline size_type size() const{
         return this->list_storage.size();
       }
   };
-}
+} //END of namespace __detail
 
 #define dictlist_default_primitive_t double
 #define dictlist_primitive_t double
 //#define dictlist_key_t std::string
 typedef std::string dictlist_key_t;
 
-typedef enum { undecided, primitive, dict, list} DictListType;
+typedef enum { undecided=0, primitive=1, dict=2, list=3} DictListType;
 
 template<typename T> class DictList_BASE;
 template<typename T> inline std::ostream& operator<<(std::ostream& os, const DictList_BASE<T>& obj);
@@ -118,41 +125,49 @@ class DictList_BASE : public __detail::DictListStorage_MIXIN<dictlist_key_t, Dic
 
         inline void clear_helper(){
             this->base_type::clear();
-            this->my_value = 0.0;
-            this->my_type = undecided;
+            //this->my_value = 0.0;
+            //this->my_type = undecided;
         }
 
-        inline void copy_helper(const DictList_BASE &other){
+        inline void copy_helper(const DictList_BASE<T>& other){
+          if(this == &other){
+            return;//no need to copy.
+          }
 
-            this->my_type = other.my_type;
-            this->my_value = other.my_value;
+            //this->my_type = other.my_type;
+            //this->my_value = other.my_value;
 
-            this->list_storage = other.list_storage;
-            this->map_key_storage = other.map_key_storage;
-            this->map_storage = dictlist_map_t(other.map_storage);
+            this->list_storage = typename base_type::list_storage_type(other.list_storage);
+            this->map_key_storage = typename base_type::map_key_storage_type(other.map_key_storage);
+            this->map_storage = typename base_type::map_storage_type(other.map_storage);
 
         }
 
         inline void undecided_to_dict_else_error(){
-            if(this->my_type == dict){return;} // already a dictionary.
+            if(this->my_type == gsparams::dict){return;} // already a dictionary.
 
             if(this->my_type == undecided){
                 this->clear_helper();//should be unnecessary
-                this->my_type = dict;
+                this->my_type = gsparams::dict;
             }else{
-                throw std::runtime_error("Already upgraded to a different container type");
+                throw std::runtime_error("Already upgraded to a different container or leaf type");
             }
+
+            assert(this->my_type == gsparams::dict);
         }
 
         inline void undecided_to_list_else_error(){
-            if(this->my_type == list){return;} //already a list
+            std::cerr << "Promoting an undecided DictList to a list." << std::endl;
+            if(this->my_type == gsparams::list){return;} //already a list
 
-            if(this->my_type == undecided){
+            if(this->my_type == gsparams::undecided){
                 this->clear_helper();//should be unnecessary
-                this->my_type = list;
+                this->my_type = gsparams::list;
             }else{
-                throw std::runtime_error("Already upgraded to a different container type");
+                throw std::runtime_error("Already upgraded to a different container or leaf type");
             }
+
+            assert(this->my_type == gsparams::list);
         }
 
     //protected:
@@ -174,7 +189,7 @@ class DictList_BASE : public __detail::DictListStorage_MIXIN<dictlist_key_t, Dic
             }
         }
 
-        inline size_type populate_internal(const std::vector< T >& target,size_type starting_at) {
+        inline size_type populate_internal(const std::vector< T >& target,const size_type starting_at) {
             //public function has already cleared and setup the beginnigs of the target vector.
             if(undecided == this->my_type){
                 return 0;
@@ -196,38 +211,49 @@ class DictList_BASE : public __detail::DictListStorage_MIXIN<dictlist_key_t, Dic
         }
 
     public:
-        inline DictList_BASE() : base_type(), my_type(undecided), my_value(0.0) {
-            my_type = undecided;
-            my_value = 0.0;//TODO: can we make this nan or some other defensive value?
+        inline DictList_BASE() : base_type(), my_type(gsparams::undecided), my_value(0.0) {
+            this->my_type = gsparams::undecided;
+            this->my_value = 0.0;//TODO: can we make this nan or some other defensive value?
         }
-        inline DictList_BASE(T in) : base_type(), my_type(primitive), my_value(in)  {
-            my_type = primitive;
-            my_value = in;
+        inline DictList_BASE(const T& in) : base_type(), my_type(gsparams::primitive), my_value(in)  {
+            this->my_type = gsparams::primitive;
+            this->my_value = in;
         }
         //copy constructor
 
-        inline DictList_BASE(const DictList_BASE<T> &other) : base_type(), my_type(undecided), my_value(0.0)  {
+        inline DictList_BASE(const DictList_BASE& other) : base_type(), my_type(other.my_type), my_value(other.my_value)  {
+
             this->copy_helper(other);
+            this->my_type = other.my_type;
+            this->my_value = other.my_value;
+
         }
 
 
         inline ~DictList_BASE(){
         }
 
-        inline DictList_BASE& operator=(const DictList_BASE<T> &other){
-            this->clear_helper();
-
-            this->copy_helper(other);
+        inline DictList_BASE& operator=(const DictList_BASE &other){
+            if(this != &other){
+              this->copy_helper(other);
+              this->my_type = other.my_type;
+              this->my_value = other.my_value;
+            }
             return *this;
         }
 
-        inline DictList_BASE& operator=(const T &other){
-            if(undecided != this->my_type && primitive != this->my_type){
+        inline DictList_BASE& operator=(const T& value){
+            if(!(undecided == this->my_type || primitive == this->my_type)){
                 throw std::runtime_error("Attempt to assign primitive value to nonprimitive, non undecided DictList.");
             }
-            this->clear_helper();
+
+            assert(this->size() == -2 || this->size() == 1);//undecided or primitive
+
+            //Don't need this because we already know that the thing is empty.
+            //this->clear_helper();//You could assign something to equal a value stored in itself and if so, it could cause problems?
+
             this->my_type = primitive;
-            this->my_value = other;
+            this->my_value = value;
 
             return *this;
         }
@@ -242,48 +268,56 @@ class DictList_BASE : public __detail::DictListStorage_MIXIN<dictlist_key_t, Dic
         /*
         * functions and operators for list-like behaviour.
         */
-        inline void push_back(const DictList_BASE<T>& in) {
+        inline void push_back(const DictList_BASE& in) {
+            this->undecided_to_list_else_error();
+            assert(this->my_type == gsparams::list);
+            assert(0 <= this->size());
+
+
+            DictList_BASE tmp_element(in);//should use copy assignment?
+            //TODO: scan ourselves to see that we don't already contain this value? Or make a copy?
+
             switch(this->my_type){
-                case primitive:
+                case gsparams::primitive:
                     throw std::runtime_error("Cannot append to a primitive");
                     break;
-                case undecided:
-                    this->my_type = list;
-                    //this->list_storage = new std::vector<DictList_BASE<T>>(0);
-                    this->base_type::clear();//list_storage should already be cleared...
-                    //deliberate fallhrough.
-                case list:
-                    this->list_storage.push_back(in);
+                case gsparams::undecided:
+                    throw std::runtime_error("still undecided even after asserts");
                     break;
-                case dict:
+                case gsparams::dict:
                     throw std::runtime_error("Cannot append to a dict as though it were a list");//because no key.
+                    break;
+                case gsparams::list:
+                    this->list_storage.push_back(tmp_element);
                     break;
                 default:
                     throw std::runtime_error("somethind strange.");
             }
         }
 
-        inline void push_back(T in){
+        inline void push_back(const T& in){
             #ifdef GS_PARAM_STORAGE_DEBUG
             std::cerr << "append from value" << std::endl;
             #endif
             //relies on the other version for sanity checking.
-            DictList_BASE<T> indictlist(in);
+            DictList_BASE indictlist(in);
             this->push_back(indictlist);
+
+            assert(gsparams::list == this->my_type);
         }
 
         inline DictList_BASE& at(const size_type location) {
             switch(this->my_type){
 
-                case list:
-                case dict:
+                case gsparams::list:
+                case gsparams::dict:
                     //in both of these cases, we access as a list.
                     return this->list_storage.at(location);//vector::at() is in C++98, keep
                     break;
-                case primitive:
+                case gsparams::primitive:
                     throw std::runtime_error("Can't subscript a primitive value.");
                     break;
-                case undecided:
+                case gsparams::undecided:
                 default:
                     throw std::runtime_error("Cant get values from undecided dictlist.");
             }
@@ -303,11 +337,15 @@ class DictList_BASE : public __detail::DictListStorage_MIXIN<dictlist_key_t, Dic
         /*
         *functions and operators for map/dictionary -like behaviour
         */
-        inline void set(dictlist_key_t key, DictList_BASE& in){
-            undecided_to_dict_else_error();
-            if(this->my_type != dict){throw std::runtime_error("Not a dictionary.");}
+        inline void set(dictlist_key_t key, const DictList_BASE& in){
+            this->undecided_to_dict_else_error();
+            assert(gsparams::dict == this->my_type);
+            if(gsparams::dict != this->my_type){throw std::runtime_error("Not a dictionary.");}
+
             //What if the value already exists?
             typename dictlist_map_t::iterator key_to_int = this->map_storage.find(key);
+
+            //TODO: move this to the storage mixin.
             if(this->map_storage.end() == key_to_int){
                 //key does not exist
                 this->list_storage.push_back(in);
@@ -320,12 +358,12 @@ class DictList_BASE : public __detail::DictListStorage_MIXIN<dictlist_key_t, Dic
         }
 
         inline void set(dictlist_key_t key, T in){
-            DictList_BASE<T> indictlist(in);
+            DictList_BASE indictlist(in);
             this->set(key,indictlist);
         }
 
         inline DictList_BASE& at(dictlist_key_t key) {
-            if(dict != this->my_type){
+            if(gsparams::dict != this->my_type){
                 throw std::runtime_error("Can't us this as a dictionary.");
             }
             typename dictlist_map_t::iterator key_to_int = this->map_storage.find(key);
@@ -336,11 +374,11 @@ class DictList_BASE : public __detail::DictListStorage_MIXIN<dictlist_key_t, Dic
         }
 
         inline DictList_BASE& operator[](dictlist_key_t key) {
-            undecided_to_dict_else_error();
+            this->undecided_to_dict_else_error();
             typename dictlist_map_t::iterator key_to_int = this->map_storage.find(key);
             if(this->map_storage.end() == key_to_int){
                 //
-                DictList_BASE<T> tmp;
+                DictList_BASE tmp;
                 this->set(key,tmp);//should insert into the key list if necessary
 
                 //Try again using the same search code.
@@ -364,22 +402,25 @@ class DictList_BASE : public __detail::DictListStorage_MIXIN<dictlist_key_t, Dic
         *END functions and operators for map/dictionary -like behaviour
         */
 
-        inline size_type size() const {
+        inline int size() const {
+          
             switch(this->my_type){
-                case undecided:
+                case gsparams::undecided:
                     return -2;
                     break;
-                case primitive:
+                case gsparams::primitive:
                     return 1;
                     break;
-                case list:
-                case dict:
-                    return this->base_type::size();
+                case gsparams::list:
+                case gsparams::dict:
+                    return (int)this->base_type::size();
                 default:
                     break;
             }
+
             //Should and must never reach here.
             //TODO: Consider adding an assert, an exception may make it too much slower.
+            assert(false);
             return -3;
         }
 
@@ -685,13 +726,19 @@ class DictList_BASE<T>::iterator : public std::forward_iterator_tag {
 template<typename T>
     inline std::ostream& operator<<(std::ostream& os, const DictList_BASE<T>& obj)
     {
+
+        if(gsparams::undecided == obj.my_type){
+            os << "null";
+            return os;
+        }
+
         // write obj to stream
-        if(primitive == obj.my_type){
+        if(gsparams::primitive == obj.my_type){
             os << obj.v();
             return os;
         }
 
-        if(dict == obj.my_type){
+        if(gsparams::dict == obj.my_type){
             os << "{";
                 int n_members = obj.size();
                 if(n_members > 0){
@@ -704,7 +751,7 @@ template<typename T>
                 }
             os << "}";
             return os;
-        }else if(list == obj.my_type){
+        }else if(gsparams::list == obj.my_type){
             os << "[";
             int n_members = obj.size();
             if(n_members > 0){
@@ -717,7 +764,7 @@ template<typename T>
             }
 
             os << "]";
-        }else if(primitive == obj.my_type){
+        }else if(gsparams::primitive == obj.my_type){
             os << obj.v();
         }
 
