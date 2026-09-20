@@ -102,8 +102,29 @@ Of course you could convert them to something more static if you feel that the s
     return some_iterated_function_that_uses_x_and_y_many_times(x,y);
 ```
 
+## Efficient Storage with HDF5 , usefulness in HPC / parallel workloads
 
-#### Bibliography
+*This section is a work in progress. The feature it presents is important enough that it should be mentioned before the wording is perfect.*
+
+ASCII is ultimately an inefficient way to store numerical data. Likewise it is inefficient to store many small files on a filesystem.
+
+HDF5 alone can solve both of these problems, _provided_ that you have the time and energy to integrate it into your project.
+Unfortunately it is not possible for multiple unrelated processes to write to a single large HDF5 file simultaneously. (Multiprocess HDF5 writing is available with MPI.)
+
+For large scale compute jobs, my process has been as follows:
+
+- Group jobs into batches of a reasonable size, such as 100 or 500.
+- Individual jobs generate SNOT files.
+- A per-batch fanin job collects the SNOT files and puts their numerical contents (easily accessed in its vector format) into a single HDF5 file. Each SNOT file becomes one row in a matrix. Use your scheduler to ensure that only one fanin job runs at a time.
+- A single `prototype` copy of the ASCII SNOT layout is stored as an HDF5 attribute on that matrix. Later on the original files or datastructure can be reconstituted.
+
+### short version (to update later)
+
+- One HDF5 matrix, the vector representation of each SNOT file forms a row.
+- One prototype ASCII SNOT file is stored as an HDF5 attribute for that matrix.
+
+
+## Bibliography
 
 The SNOT grammar was adapted from the JSON grammer available here: https://gist.github.com/justjkk/436828/
 
@@ -117,4 +138,4 @@ https://github.com/linse/flex-bison-cpp-example
 
 https://www.gnu.org/software/automake/manual/html_node/Yacc-and-Lex.html
 
-The ANTLR4 grammar was cut down from the JSON grammar at https://raw.githubusercontent.com/antlr/grammars-v4/master/json/JSON.g4
+The ANTLR4 grammar was cut down from the JSON grammar at https://raw.githubusercontent.com/antlr/grammars-v4/master/json/JSON.g4 . The original author has granted authorization and chose the license header added to the file.
