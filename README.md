@@ -116,17 +116,22 @@ For large scale compute jobs, my process has been as follows:
 - Group jobs into batches of a reasonable size, such as 100 or 500.
 - Individual jobs generate SNOT files.
 - A per-batch fanin job collects the SNOT files and puts their numerical contents (easily accessed in its vector format) into a single HDF5 file. Each SNOT file becomes one row in a matrix. Use your scheduler to ensure that only one fanin job runs at a time.
-- A single `prototype` copy of the ASCII SNOT layout is stored as an HDF5 attribute on that matrix. Later on the original files or datastructure can be reconstituted.
+- A single "prototype" copy of the ASCII SNOT layout is stored as an HDF5 attribute on that matrix. Later on the original files or datastructure can be reconstituted.
 
 ### short version (to update later)
 
 - One HDF5 matrix, the vector representation of each SNOT file forms a row.
 - One prototype ASCII SNOT file is stored as an HDF5 attribute for that matrix.
 
+## Impact
+
+SNOT has already been used effectively in the gene expression modelling software [GEMSTAT](https://github.com/UIUCSinhaLab/GEMSTAT) , which has been maintained and upgraded by this author. The introduction of SNOT allowed all of the intermediate code of the program to become agnostic to the exact structure of parameters. This in turn has made maintenance much easier.
+Most importantly, SNOT allowed several other users to quickly imagine and add their own new features; a new objective function, a new model, and other modifications. With SNOT, they could focus only on the one part of the program they wished to modify, and feed an appropriate input file with their new parameters. Prior to the introduction of SNOT the effort to do this was prohibitive and it was necessary to understand the entire flow of parameters from beginning to end.
+
 
 ## Bibliography
 
-The SNOT grammar was adapted from the JSON grammer available here: https://gist.github.com/justjkk/436828/
+The SNOT grammar was adapted from the JSON grammar available here: https://gist.github.com/justjkk/436828/
 
 I benefit from this tutorial: https://www.usna.edu/Users/cs/lmcdowel/courses/si413/F10/labs/L04/calc1/ex1.html
 (and parts of the code come from there, with heavy modifications.)
